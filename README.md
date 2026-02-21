@@ -44,6 +44,41 @@ python manage.py runserver
 
 The Django API will be available at `http://localhost:8000/`
 
+### Local Database Setup
+
+1. Ensure that PostgreSQL version 17 is installed
+
+2. Once PostgreSQL is setup, create a new database named "phishfree_db"
+
+3. Run the following command:
+```bash
+pip install django psycopg2-binary
+```
+
+4. Ensure python-dotenv is installed:
+```bash
+pip install python-dotenv
+```
+
+5. Create a .env file in the project (if not already made), ensure it is included in .gitignore, and put this in it:
+```bash
+DB_NAME=phishfree_db
+DB_USER=postgres
+DB_PASSWORD=password
+DB_HOST=localhost
+DB_PORT=5432
+```
+6. Replace "DB_PASSWORD" with your own password for Postgres
+
+7. If you would like to use a different user, replace DB_USER
+
+8. Run the following to create the tables:
+```bash
+pytgon manage.py makemigrations
+python manage.py migrate
+```
+Your local database is now set up!
+
 ### API Endpoints
 
 - `http://localhost:8000/api/hello/` - Test endpoint that returns a greeting
