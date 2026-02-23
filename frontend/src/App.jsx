@@ -1,57 +1,31 @@
-import { useState, useEffect } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import { Routes, Route, Navigate } from "react-router-dom";
+// Imports must point to the 'pages' folder
+import Login from "./pages/Login";
+import SignupRole from "./pages/SignupRole";
+import SignupIndividual from "./pages/SignupIndividual";
+import SignupCompany from "./pages/SignupCompany";
+import Home from "./pages/Home";
+import Profile from "./pages/Profile";
+import Learning from "./pages/Learning";
+import ProtectedRoute from "./routes/ProtectedRoute";
 
-function App() {
-  const [count, setCount] = useState(0)
-  const [apiMessage, setApiMessage] = useState('')
-  const [loading, setLoading] = useState(false)
-
-  const fetchFromAPI = async () => {
-    setLoading(true)
-    try {
-      const response = await fetch('/api/hello/')
-      const data = await response.json()
-      setApiMessage(data.message)
-    } catch (error) {
-      setApiMessage('Error connecting to Django API')
-      console.error('Error:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
-
+export default function App() {
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React + Django</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.jsx</code> and save to test HMR
-        </p>
-      </div>
-      <div className="card">
-        <button onClick={fetchFromAPI} disabled={loading}>
-          {loading ? 'Loading...' : 'Test Django API'}
-        </button>
-        {apiMessage && <p>API Response: {apiMessage}</p>}
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
+    <Routes>
+      {/* Public Routes */}
+      <Route path="/login" element={<Login />} />
+      <Route path="/signup" element={<SignupRole />} />
+      <Route path="/signup/individual" element={<SignupIndividual />} />
+      <Route path="/signup/company" element={<SignupCompany />} />
+      
+      {/* Protected Routes */}
+      <Route path="/home" element={<ProtectedRoute><Home /></ProtectedRoute>} />
+      <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+      <Route path="/learning" element={<ProtectedRoute><Learning /></ProtectedRoute>} />
+      
+      {/* Redirects */}
+      <Route path="/" element={<Navigate to="/login" replace />} />
+      <Route path="*" element={<Navigate to="/login" replace />} />
+    </Routes>
+  );
 }
-
-export default App
