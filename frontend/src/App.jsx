@@ -7,6 +7,7 @@ import SignupCompany from "./pages/SignupCompany";
 import Home from "./pages/Home";
 import Profile from "./pages/Profile";
 import Learning from "./pages/Learning";
+import About from "./pages/About";
 import ProtectedRoute from "./routes/ProtectedRoute";
 
 export default function App() {
@@ -17,6 +18,7 @@ export default function App() {
       <Route path="/signup" element={<SignupRole />} />
       <Route path="/signup/individual" element={<SignupIndividual />} />
       <Route path="/signup/company" element={<SignupCompany />} />
+      <Route path="/about" element={<About />} />
       
       {/* Protected Routes */}
       <Route path="/home" element={<ProtectedRoute><Home /></ProtectedRoute>} />

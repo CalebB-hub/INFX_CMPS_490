@@ -18,6 +18,9 @@ export default function TopNav() {
         <NavLink to="/home" className={({ isActive }) => (isActive ? "active" : "")}>
           Home
         </NavLink>
+        <NavLink to="/about" className={({ isActive }) => (isActive ? "active" : "")}>
+          About
+        </NavLink>
         <NavLink to="/learning" className={({ isActive }) => (isActive ? "active" : "")}>
           Learning
         </NavLink>
