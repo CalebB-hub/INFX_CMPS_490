@@ -1,5 +1,6 @@
 from django.db import models
 from django.conf import settings
+from django.contrib.auth.models import AbstractUser
 
 # Create your models here.
 
@@ -14,11 +15,12 @@ class Role(models.Model):
     role_id = models.AutoField(primary_key=True)
     role_name = models.CharField(max_length=100)
     description = models.CharField(max_length=255)
-    permissions = models.CharField(max_length=255)
 
 # User
-class User(models.Model):
+class User(AbstractUser):
+    # keep original primary key name so existing data/migrations remain valid
     user_id = models.AutoField(primary_key=True)
+
     role = models.ForeignKey(
         Role,
         on_delete=models.CASCADE
@@ -29,10 +31,13 @@ class User(models.Model):
         blank=True,
         on_delete=models.CASCADE
     )
-    first_name = models.CharField(max_length=255)
-    last_name = models.CharField(max_length=255)
-    email = models.CharField(max_length=100)
-    password_hash = models.CharField(max_length=255)
+
+    # AbstractUser already provides first_name, last_name, email and password
+    # along with authentication helpers; no need for our own versions.
+
+    def __str__(self):
+        return self.username
+
 
 # Simulated Email
 class SimulatedEmail(models.Model):
@@ -53,8 +58,8 @@ class EmailSimulation(models.Model):
         SimulatedEmail,
         on_delete=models.CASCADE
     )
-    user_id = models.ForeignKey(
-        User,
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE
     )
     company_id = models.ForeignKey(
@@ -124,16 +129,12 @@ class AnswerChoice(models.Model):
 # Assignment
 class Assignment(models.Model):
     assignment_id = models.AutoField(primary_key=True)
-    user_id = models.ForeignKey(
-        User,
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE
     )
     test_id = models.ForeignKey(
         TestLesson,
-        on_delete=models.CASCADE
-    )
-    company_id = models.ForeignKey(
-        Company,
         on_delete=models.CASCADE
     )
     assigned_by_user_id = models.IntegerField()
