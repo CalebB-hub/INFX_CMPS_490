@@ -23,7 +23,7 @@ export default function SignupRole() {
         </div>
 
         <footer style={{ marginTop: "32px", borderTop: "1px solid var(--border-strong)", paddingTop: "20px" }}>
-          <Link to="/login" style={{ color: "var(--accent)", fontWeight: "bold" }}>Back to Sign In</Link>
+          Already have an account? <Link to="/login" style={{ color: "var(--accent)", fontWeight: "bold" }}>Login here</Link>
         </footer>
       </div>
     </div>
