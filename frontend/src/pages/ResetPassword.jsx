@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate, useSearchParams, Link } from "react-router-dom";
-import PasswordStrength, { computeChecks } from "../components/PasswordStrength";
+import PasswordStrength from "../components/PasswordStrength";
+import { computeChecks } from "../utils/passwordUtils";
 import { mockResetPassword } from "../mock/mockApi";
 
 export default function ResetPassword() {
@@ -101,7 +102,7 @@ export default function ResetPassword() {
             // Uniqueness: block username/email as password if available
             // You may want to pass username/email from props or context
             const { checks } = computeChecks(password, {});
-            const allPassed = checks.minLength && checks.upper && checks.lower && checks.number && checks.special && checks.unique;
+            const allPassed = Object.values(checks).every(Boolean);
             return (
               <button className="btn" type="submit" disabled={status.loading || !allPassed}>
                 {status.loading ? "Updating..." : "Set new password"}

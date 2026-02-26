@@ -1,3 +1,15 @@
+export async function mockResetPassword(token, password) {
+  // mimic network delay
+  await new Promise((r) => setTimeout(r, 400));
+  // Always succeed for mock
+  return { message: "Password reset successful." };
+}
+export async function mockForgotPassword(email) {
+  // mimic network delay
+  await new Promise((r) => setTimeout(r, 400));
+  // Always succeed for mock
+  return { message: "Reset email sent.", token: "mock-reset-token" };
+}
 // Mock “backend” — later you’ll swap this with real Django API calls.
 
 const HARDCODED_USER = {

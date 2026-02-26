@@ -74,7 +74,7 @@ export default function AdminDashboard() {
             <h2>Admin Dashboard</h2>
             <p className="muted">Manage users, simulations, and track organization security health.</p>
           </div>
-          <Link to="/home" className="btn btn--ghost">Back to Home</Link>
+          <Link to="/home" className="btn btn--ghost" style={{ background: 'var(--accent)', color: 'black' }}>Back to Home</Link>
         </header>
 
         {/* Stats Cards */}
