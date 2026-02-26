@@ -27,6 +27,9 @@ export default function TopNav() {
         <NavLink to="/profile" className={({ isActive }) => (isActive ? "active" : "")}>
           Profile
         </NavLink>
+        <NavLink to="/settings" className={({ isActive }) => (isActive ? "active" : "")}>
+          Settings
+        </NavLink>
       </nav>
 
       <div className="topnav__right">
