@@ -11,7 +11,7 @@ export default function Login() {
     return location.state?.from || "/home";
   }, [location.state]);
 
-  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [status, setStatus] = useState({ loading: false, error: "" });
   const [showPassword, setShowPassword] = useState(false);
@@ -21,7 +21,7 @@ export default function Login() {
     setStatus({ loading: true, error: "" });
 
     try {
-      const { token, user } = await mockLogin(username.trim(), password);
+      const { token, user } = await mockLogin(email.trim(), password);
       localStorage.setItem("pf_auth_token", token);
       localStorage.setItem("pf_user", JSON.stringify(user));
       navigate(redirectTo, { replace: true });
@@ -64,12 +64,13 @@ export default function Login() {
 
         <form onSubmit={handleSubmit} className="auth__form">
           <label>
-            Username
+            Email
             <input
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              autoComplete="username"
-              placeholder="student"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              autoComplete="email"
+              placeholder="student@example.com"
               required
             />
           </label>
@@ -118,7 +119,7 @@ export default function Login() {
           </p>
           
           <p className="muted" style={{ fontSize: "12px" }}>
-            Mock credentials: <b>student</b> / <b>phishfree123</b>
+            Mock credentials: <b>student@example.com</b> / <b>phishfree123</b>
           </p>
         </footer>
       </div>

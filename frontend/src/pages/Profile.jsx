@@ -144,13 +144,13 @@ export default function Profile() {
 
             <div style={{ display: "flex", gap: "10px", marginTop: "12px" }}>
 
-             <button
-               className="btn"
-               type="button"
-               onClick={() => navigate("/reset-password")}
-              >
-               Change Password
-              </button>
+ <button
+   className="btn"
+   type="button"
+   onClick={() => navigate("/reset-password")}
+  >
+   Change Password
+  </button>
 
              <button
                 className="btn btn--danger"

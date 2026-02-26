@@ -14,27 +14,33 @@ export async function mockForgotPassword(email) {
 
 const HARDCODED_USER = {
   username: "student",
+  email: "student@example.com",
   password: "phishfree123",
   name: "Phish Free User",
   role: "individual", // later: admin/company_user/etc
 };
 
-export async function mockLogin(username, password) {
+export async function mockLogin(emailOrUsername, password) {
   // mimic network delay
   await new Promise((r) => setTimeout(r, 400));
 
-  if (username === HARDCODED_USER.username && password === HARDCODED_USER.password) {
+  const isMatchingUser =
+    emailOrUsername === HARDCODED_USER.email ||
+    emailOrUsername === HARDCODED_USER.username;
+
+  if (isMatchingUser && password === HARDCODED_USER.password) {
     return {
       token: "mock-token-123",
       user: {
         username: HARDCODED_USER.username,
+        email: HARDCODED_USER.email,
         name: HARDCODED_USER.name,
         role: HARDCODED_USER.role,
       },
     };
   }
 
-  const err = new Error("Invalid username or password.");
+  const err = new Error("Invalid email or password.");
   err.status = 401;
   throw err;
 }
