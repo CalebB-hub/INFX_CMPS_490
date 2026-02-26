@@ -4,11 +4,14 @@ import Login from "./pages/Login";
 import SignupRole from "./pages/SignupRole";
 import SignupIndividual from "./pages/SignupIndividual";
 import SignupCompany from "./pages/SignupCompany";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
 import Home from "./pages/Home";
 import Profile from "./pages/Profile";
 import Learning from "./pages/Learning";
 import About from "./pages/About";
 import Settings from "./pages/Settings";
+import AdminDashboard from "./pages/AdminDashboard";
 import ProtectedRoute from "./routes/ProtectedRoute";
 
 export default function App() {
@@ -19,6 +22,9 @@ export default function App() {
       <Route path="/signup" element={<SignupRole />} />
       <Route path="/signup/individual" element={<SignupIndividual />} />
       <Route path="/signup/company" element={<SignupCompany />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route path="/reset-password" element={<ResetPassword />} />
+      <Route path="/admin" element={<AdminDashboard />} />
       
       {/* Protected Routes */}
       <Route path="/home" element={<ProtectedRoute><Home /></ProtectedRoute>} />

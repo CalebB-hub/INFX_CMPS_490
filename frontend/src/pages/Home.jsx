@@ -1,4 +1,5 @@
 import TopNav from "../components/TopNav";
+import { Link } from "react-router-dom";
 
 export default function Home() {
   return (
@@ -17,6 +18,11 @@ export default function Home() {
             <li>Add an assessment/quiz flow</li>
             <li>Add progress tracking UI (mocked data)</li>
           </ul>
+        </div>
+
+        <div className="card">
+          <h3>Admin Access</h3>
+          <Link to="/admin" className="btn">Open Admin Dashboard</Link>
         </div>
       </main>
     </div>
