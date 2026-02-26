@@ -40,6 +40,9 @@ export default function TopNav() {
         <NavLink to="/about" className={({ isActive }) => (isActive ? "active" : "")}>
           About
         </NavLink>
+        <NavLink to="/settings" className={({ isActive }) => (isActive ? "active" : "")}>
+          Settings
+        </NavLink>
       </nav>
 
       <div className="topnav__right">
