@@ -147,7 +147,7 @@ export default function Profile() {
              <button
                className="btn"
                type="button"
-               onClick={() => alert("Change password page coming soon.")}
+               onClick={() => navigate("/reset-password")}
               >
                Change Password
               </button>
