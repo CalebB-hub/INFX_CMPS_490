@@ -9,6 +9,7 @@ import ResetPassword from "./pages/ResetPassword";
 import Home from "./pages/Home";
 import Profile from "./pages/Profile";
 import Learning from "./pages/Learning";
+import Quizzes from "./pages/Quizzes";
 import About from "./pages/About";
 import Settings from "./pages/Settings";
 import AdminDashboard from "./pages/AdminDashboard";
@@ -30,6 +31,7 @@ export default function App() {
       <Route path="/home" element={<ProtectedRoute><Home /></ProtectedRoute>} />
       <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
       <Route path="/learning" element={<ProtectedRoute><Learning /></ProtectedRoute>} />
+      <Route path="/learning/quizzes" element={<ProtectedRoute><Quizzes /></ProtectedRoute>} />
       <Route path="/about" element={<ProtectedRoute><About /></ProtectedRoute>} />
       <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
       
