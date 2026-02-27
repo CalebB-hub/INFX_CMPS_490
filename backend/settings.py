@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
+    'rest_framework.authtoken',
     'corsheaders',
     'api',
 ]
@@ -154,5 +155,20 @@ CORS_ALLOWED_ORIGINS = [
 REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.AllowAny',
-    ]
+    ],
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+        'rest_framework.authentication.SessionAuthentication',
+    ],
+}
+
+# SimpleJWT settings – our User PK field is user_id, not id
+from datetime import timedelta
+
+SIMPLE_JWT = {
+    'USER_ID_FIELD': 'user_id',
+    'USER_ID_CLAIM': 'user_id',
+    # Leave lifetimes at their defaults; can be tuned later
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=5),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
 }
