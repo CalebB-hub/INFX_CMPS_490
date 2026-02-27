@@ -82,6 +82,9 @@ Your local database is now set up!
 ### API Endpoints
 
 - `http://localhost:8000/api/hello/` - Test endpoint that returns a greeting
+- `http://localhost:8000/api/auth/signup/` - User registration
+- `http://localhost:8000/api/auth/login/` - User login, returns JWT access/refresh tokens
+- `http://localhost:8000/api/auth/password-policy/` - Password policy for frontend validation
 - `http://localhost:8000/admin/` - Django admin interface
 
 ## Frontend Setup (Vite + React)

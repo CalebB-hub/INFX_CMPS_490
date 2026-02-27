@@ -107,18 +107,29 @@ AUTH_USER_MODEL = 'api.User'
 # Password validation
 # https://docs.djangoproject.com/en/6.0/ref/settings/#auth-password-validators
 
+PASSWORD_POLICY = {
+    'MIN_LENGTH': 8,
+    'REQUIRE_UPPERCASE': True,
+    'REQUIRE_NUMBER': True,
+    'REQUIRE_SPECIAL_CHAR': True,
+}
+
 AUTH_PASSWORD_VALIDATORS = [
     {
         'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
-    },
-    {
         'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
+        # Wraps min length + other complexity rules in one place
+        'NAME': 'api.validators.ComplexityValidator',
+        'OPTIONS': {
+            'min_length': PASSWORD_POLICY['MIN_LENGTH'],
+            'require_uppercase': PASSWORD_POLICY['REQUIRE_UPPERCASE'],
+            'require_number': PASSWORD_POLICY['REQUIRE_NUMBER'],
+            'require_special': PASSWORD_POLICY['REQUIRE_SPECIAL_CHAR'],
+        },
     },
 ]
 
