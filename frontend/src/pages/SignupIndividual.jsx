@@ -2,15 +2,8 @@ import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { mockSignup } from "../mock/mockApi";
 import PasswordStrength from "../components/PasswordStrength";
+import PasswordToggleIcon from "../components/PasswordToggleIcon";
 import { computeChecks } from "../utils/passwordUtils";
-
-const EyeOffIcon = () => (
-  <span>👁️</span>
-);
-
-const EyeIcon = () => (
-  <span>👁️‍🗨️</span>
-);
 
 export default function SignupIndividual() {
   const navigate = useNavigate();
@@ -63,7 +56,7 @@ export default function SignupIndividual() {
                   style={{ position: "absolute", right: "10px", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: "var(--muted)", padding: 0, display: "flex" }}
                   title={showPassword ? "Hide password" : "Show password"}
                 >
-                  {showPassword ? <EyeIcon /> : <EyeOffIcon />}
+                  <PasswordToggleIcon showPassword={showPassword} />
                 </button>
               )}
             </div>

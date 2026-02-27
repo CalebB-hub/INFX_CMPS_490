@@ -20,14 +20,11 @@ const HARDCODED_USER = {
   role: "individual", // later: admin/company_user/etc
 };
 
-export async function mockLogin(email, password) {
+export async function mockLogin(username, password) {
   // mimic network delay
   await new Promise((r) => setTimeout(r, 400));
 
-  const isValidLogin = (email === HARDCODED_USER.email || email === HARDCODED_USER.username)
-    && password === HARDCODED_USER.password;
-
-  if (isValidLogin) {
+  if (username === HARDCODED_USER.username && password === HARDCODED_USER.password) {
     return {
       token: "mock-token-123",
       user: {
