@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import TopNav from "../components/TopNav";
 
 export default function Learning() {
@@ -17,6 +18,10 @@ export default function Learning() {
             <li>Module 2: Links & attachments</li>
             <li>Module 3: Social engineering tactics</li>
           </ul>
+        </div>
+
+        <div style={{ marginTop: "16px" }}>
+          <Link className="btn" to="/learning/quizzes">Quizzes</Link>
         </div>
       </main>
     </div>
