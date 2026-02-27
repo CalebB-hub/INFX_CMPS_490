@@ -6,6 +6,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import get_user_model, authenticate
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError as DjangoValidationError
+from django.conf import settings
 
 from .models import Role
 
@@ -96,6 +97,24 @@ def signup(request):
             'message': 'User created successfully',
         },
         status=status.HTTP_201_CREATED,
+    )
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def password_policy(request):
+    """
+    Return password policy used by backend validators for frontend guidance.
+    """
+    policy = getattr(settings, "PASSWORD_POLICY", {})
+    return Response(
+        {
+            "minLength": policy.get("MIN_LENGTH", 8),
+            "requireUppercase": policy.get("REQUIRE_UPPERCASE", True),
+            "requireNumber": policy.get("REQUIRE_NUMBER", True),
+            "requireSpecialChar": policy.get("REQUIRE_SPECIAL_CHAR", True),
+        },
+        status=status.HTTP_200_OK,
     )
 
 
