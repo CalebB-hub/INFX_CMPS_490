@@ -1,5 +1,7 @@
 from django.test import TestCase
 from django.utils import timezone
+from rest_framework.test import APITestCase
+from django.urls import reverse
 
 from .models import Role, Company, User, Test as TestModel
 from .services import (
@@ -103,3 +105,46 @@ class ServiceLayerTests(TestCase):
         assignment_service.delete_assignment(a.assignment_id)
         from .models import Assignment
         self.assertFalse(Assignment.objects.filter(assignment_id=a.assignment_id).exists())
+
+
+class AuthEndpointTests(APITestCase):
+    """Tests for authentication-related API endpoints."""
+
+    def setUp(self):
+        # create a user that can log in
+        role, _ = Role.objects.get_or_create(
+            role_name='User',
+            defaults={'description': 'default', 'permissions': ''}
+        )
+        self.user = User.objects.create_user(
+            username='bob@example.com',
+            email='bob@example.com',
+            password='secret',
+            role=role,
+        )
+
+    def obtain_token_pair(self):
+        url = reverse('login')
+        resp = self.client.post(url, {'email': self.user.email, 'password': 'secret'}, format='json')
+        self.assertEqual(resp.status_code, 200)
+        return resp.data['accessToken'], resp.data['refreshToken']
+
+    def test_logout_blacklists_refresh(self):
+        access, refresh = self.obtain_token_pair()
+
+        # logout using refresh token
+        url = reverse('logout')
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {access}')
+        resp = self.client.post(url, {'refreshToken': refresh}, format='json')
+        self.assertEqual(resp.status_code, 204)
+
+        # attempting to blacklist the same refresh token again should raise an error
+        from rest_framework_simplejwt.tokens import RefreshToken
+        with self.assertRaises(Exception):
+            RefreshToken(refresh).blacklist()
+
+    def test_logout_requires_token(self):
+        access, _ = self.obtain_token_pair()
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {access}')
+        resp = self.client.post(reverse('logout'), {}, format='json')
+        self.assertEqual(resp.status_code, 400)

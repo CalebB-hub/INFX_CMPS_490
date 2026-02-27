@@ -1,5 +1,5 @@
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -169,3 +169,31 @@ def login(request):
         status=status.HTTP_200_OK,
     )
 
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def logout(request):
+    """
+    Blacklist the refresh token supplied by the client.
+
+    Expected body: { "refreshToken": "<the refresh token string>" }
+    Returns 204 on success, 400 if the token in missing/invalid.
+    """
+    body = request.data if getattr(request, 'data', None) is not None else {}
+    refresh_token = body.get('refreshToken')
+
+    if not refresh_token:
+        return Response(
+            {'error': 'refreshToken is required.'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+    
+    try:
+        # this will raise if the token is invalid or already blacklisted
+        RefreshToken(refresh_token).blacklist()
+    except Exception:
+        return Response(
+            {'error': 'Invalid refresh token.'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+    
+    return Response(status=status.HTTP_204_NO_CONTENT)
