@@ -2,7 +2,8 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework import status
-from django.contrib.auth import get_user_model
+from rest_framework_simplejwt.tokens import RefreshToken
+from django.contrib.auth import get_user_model, authenticate
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError as DjangoValidationError
 
@@ -95,5 +96,57 @@ def signup(request):
             'message': 'User created successfully',
         },
         status=status.HTTP_201_CREATED,
+    )
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def login(request):
+    """
+    Authenticate user and return JWT access/refresh tokens.
+    Expected body: { "email": string, "password": string }
+    """
+    body = request.data if getattr(request, 'data', None) is not None else {}
+    if not isinstance(body, dict):
+        return Response(
+            {'error': 'Request body must be JSON object.'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    email = str(body.get('email', '')).strip().lower()
+    password = str(body.get('password', ''))
+
+    if not email or not password:
+        missing = []
+        if not email:
+            missing.append('email')
+        if not password:
+            missing.append('password')
+        return Response(
+            {'error': 'Missing required fields.', 'fields': missing},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    # Attempt authentication using email as username (we store username=email for signups)
+    user = authenticate(request, username=email, password=password)
+    if user is None:
+        return Response(
+            {'error': 'Invalid email or password.'},
+            status=status.HTTP_401_UNAUTHORIZED,
+        )
+
+    # Issue JWT access/refresh token pair
+    refresh = RefreshToken.for_user(user)
+
+    return Response(
+        {
+            'accessToken': str(refresh.access_token),
+            'refreshToken': str(refresh),
+            'user': {
+                'id': str(user.user_id),
+                'email': user.email,
+            },
+        },
+        status=status.HTTP_200_OK,
     )
 
