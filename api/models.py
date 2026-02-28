@@ -10,12 +10,34 @@ class Company(models.Model):
     name = models.CharField(max_length=255)
     location = models.CharField(max_length=255)
 
+    def __str__(self):
+        return self.name
+
+
 # Role
 class Role(models.Model):
+    MANAGER = 'manager'
+    EMPLOYEE = 'employee'
+    
+    ROLE_CHOICES = [
+        (MANAGER, 'Manager'),
+        (EMPLOYEE, 'Employee'),
+    ]
+    
     role_id = models.AutoField(primary_key=True)
-    role_name = models.CharField(max_length=100)
+    role_name = models.CharField(max_length=100, choices=ROLE_CHOICES, unique=True)
     description = models.CharField(max_length=255)
-    permissions = models.TextField()
+
+    def __str__(self):
+        return self.get_role_name_display()
+    
+    def has_permission(self, permission_name):
+        """Check if this role has a specific permission"""
+        permissions_map = {
+            'manager': ['add_user', 'change_user', 'delete_user', 'view_user'],
+            'employee': ['change_own_user'],
+        }
+        return permission_name in permissions_map.get(self.role_name, [])
 
 # User
 class User(AbstractUser):
