@@ -19,11 +19,6 @@ export default function Home() {
             <li>Add progress tracking UI (mocked data)</li>
           </ul>
         </div>
-
-        <div className="card">
-          <h3>Admin Access</h3>
-          <Link to="/admin" className="btn">Open Admin Dashboard</Link>
-        </div>
       </main>
     </div>
   );

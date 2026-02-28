@@ -12,25 +12,29 @@ export async function mockForgotPassword(email) {
 }
 // Mock “backend” — later you’ll swap this with real Django API calls.
 
-const HARDCODED_USER = {
-  email: "student@example.com",
-  password: "phishfree123",
-  name: "Phish Free User",
-  role: "individual", // later: admin/company_user/etc
-};
+const USERS = [
+  {
+    email: "student@example.com",
+    password: "phishfree123",
+    name: "Phish Free User",
+    role: "individual",
+  },
+  {
+    email: "admin@example.com",
+    password: "phishfree123",
+    name: "Phish Free Admin",
+    role: "admin",
+  },
+];
 
 export async function mockLogin(email, password) {
-  // mimic network delay
   await new Promise((r) => setTimeout(r, 400));
 
-  if (email === HARDCODED_USER.email && password === HARDCODED_USER.password) {
+  const found = USERS.find((u) => u.email === email && u.password === password);
+  if (found) {
     return {
       token: "mock-token-123",
-      user: {
-        email: HARDCODED_USER.email,
-        name: HARDCODED_USER.name,
-        role: HARDCODED_USER.role,
-      },
+      user: { email: found.email, name: found.name, role: found.role },
     };
   }
 

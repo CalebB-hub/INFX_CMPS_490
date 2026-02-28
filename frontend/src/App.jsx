@@ -15,6 +15,8 @@ import Settings from "./pages/Settings";
 import AdminDashboard from "./pages/AdminDashboard";
 import ProtectedRoute from "./routes/ProtectedRoute";
 import LessonDetails from "./pages/LessonDetails";
+import ProfileRouter from "./pages/ProfileRouter";
+
 
 export default function App() {
   return (
@@ -29,7 +31,8 @@ export default function App() {
       
       {/* Protected Routes */}
       <Route path="/home" element={<ProtectedRoute><Home /></ProtectedRoute>} />
-      <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+      <Route path="/profile" element={<ProtectedRoute><ProfileRouter /></ProtectedRoute>} />
+      <Route path="/profile/me" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
       <Route path="/learning" element={<ProtectedRoute><Learning /></ProtectedRoute>} />
       <Route path="/learning/quizzes" element={<ProtectedRoute><Quizzes /></ProtectedRoute>} />
       <Route path="/about" element={<ProtectedRoute><About /></ProtectedRoute>} />
