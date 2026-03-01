@@ -197,3 +197,22 @@ def logout(request):
         )
     
     return Response(status=status.HTTP_204_NO_CONTENT)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def me(request):
+    """
+    Returns the current user's profile information
+    """
+
+    user = request.user
+    return Response(
+        {
+            'id': str(user.user_id),
+            'email': user.email,
+            'firstName': user.first_name,
+            'lastName': user.last_name,
+            'role': user.role.role_name if user.role else None,
+        },
+        status=status.HTTP_200_OK,
+    )
