@@ -1,7 +1,8 @@
 from django.test import TestCase
 from django.utils import timezone
-from rest_framework.test import APITestCase
+from rest_framework.test import APITestCase, APIClient
 from django.urls import reverse
+from rest_framework_simplejwt.tokens import RefreshToken
 
 from .models import Role, Company, User, Test as TestModel
 from .services import (
@@ -148,3 +149,26 @@ class AuthEndpointTests(APITestCase):
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {access}')
         resp = self.client.post(reverse('logout'), {}, format='json')
         self.assertEqual(resp.status_code, 400)
+
+class UserProfileTests(TestCase):
+    def setUp(self):
+        role, _ = Role.objects.get_or_create(
+            role_name='User',
+            defaults={'description': 'default', 'permissions': ''}
+        )
+        self.user = User.objects.create_user(
+            username='alice@example.com',
+            email='alice@example.com',
+            password='secret123',
+            first_name='Alice',
+            last_name='Tester',
+            role=role,
+        )
+
+    def test_get_profile(self):
+        client = APIClient()
+        token = RefreshToken.for_user(self.user).access_token
+        client.credentials(HTTP_AUTHORIZATION=f'Bearer {token}')
+        resp = client.get(reverse('me'))
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.data['email'], self.user.email)

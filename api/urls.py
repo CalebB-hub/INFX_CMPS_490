@@ -7,4 +7,5 @@ urlpatterns = [
     path('auth/password-policy/', views.password_policy, name='password_policy'),
     path('auth/login/', views.login, name='login'),
     path('auth/logout/', views.logout, name='logout'),
+    path('users/me', views.me, name='me'),
 ]
