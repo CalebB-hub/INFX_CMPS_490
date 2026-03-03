@@ -1,4 +1,5 @@
 import { NavLink, useNavigate } from "react-router-dom";
+import { useEffect, useRef, useState } from "react";
 import { getUser } from "../services/authService";
 import PhishFreeLogoText from "../Logos/Phish Free Logo Text.png";
 
@@ -6,29 +7,54 @@ export default function TopNav() {
   const navigate = useNavigate();
   const user = getUser();
 
+  const [profileOpen, setProfileOpen] = useState(false);
+  const dropdownRef = useRef(null);
+
   function goToProfile() {
+    setProfileOpen(false);
     navigate("/profile");
   }
 
+  function goToSettings() {
+    setProfileOpen(false);
+    navigate("/settings");
+  }
+
+  // close dropdown on outside click + Escape
+  useEffect(() => {
+    function onDocMouseDown(e) {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+        setProfileOpen(false);
+      }
+    }
+    function onKeyDown(e) {
+      if (e.key === "Escape") setProfileOpen(false);
+    }
+
+    document.addEventListener("mousedown", onDocMouseDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", onDocMouseDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, []);
+
   return (
     <header className="topnav">
-      <div 
+      <div
         className="topnav__brand"
         onClick={() => navigate("/home")}
         style={{ cursor: "pointer", display: "flex", alignItems: "center", gap: "8px" }}
       >
-        <img 
-          src={PhishFreeLogoText} 
-          alt="Phish Free" 
-          style={{ 
-            height: "32px", 
-            width: "auto",
-            display: "block"
-          }} 
+        <img
+          src={PhishFreeLogoText}
+          alt="Phish Free"
+          style={{ height: "32px", width: "auto", display: "block" }}
         />
       </div>
 
-      <nav className="topnav__links">
+      {/* Centered tabs */}
+      <nav className="topnav__links" aria-label="Primary">
         <NavLink to="/home" className={({ isActive }) => (isActive ? "active" : "")}>
           Home
         </NavLink>
@@ -40,40 +66,30 @@ export default function TopNav() {
         <NavLink to="/about" className={({ isActive }) => (isActive ? "active" : "")}>
           About
         </NavLink>
-        <NavLink to="/settings" className={({ isActive }) => (isActive ? "active" : "")}>
-          Settings
-        </NavLink>
+
       </nav>
 
       <div className="topnav__right">
+        {/* Profile dropdown */}
+        <div className="topnav__profileMenu" ref={dropdownRef}>
+          <button
+            className="btn topnav__profileBtn"
+            onClick={() => setProfileOpen((v) => !v)}
+          > 
+            Profile
+          </button>
 
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", marginRight: "10px" }}>
-          <span style={{ fontWeight: "700", fontSize: "14px" }}>
-            {user?.name || "User"}
-          </span>
-
-          <span style={{
-            fontSize: "10px",
-            textTransform: "uppercase",
-            backgroundColor: user?.role === "organization" ? "#7cd4fd" : "#FDAD6B",
-            color: "#111",
-            padding: "2px 8px",
-            borderRadius: "12px",
-            fontWeight: "900",
-            marginTop: "2px"
-          }}>
-            {user?.role || "Guest"}
-          </span>
+          {profileOpen && (
+            <div className="topnav__dropdown" role="menu">
+              <button className="topnav__dropdownItem" role="menuitem" onClick={goToProfile}>
+                My Profile
+              </button>
+              <button className="topnav__dropdownItem" role="menuitem" onClick={goToSettings}>
+                Settings
+              </button>
+            </div>
+          )}
         </div>
-
-        {/* NEW PROFILE BUTTON */}
-        <button
-          className="btn btn--ghost"
-          onClick={goToProfile}
-        >
-          Profile
-        </button>
-
       </div>
     </header>
   );
