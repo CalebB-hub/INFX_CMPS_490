@@ -184,9 +184,19 @@ export async function mockGetLessonById(lessonId) {
   return lesson
 }
 
+export async function mockGetLessons() {
+  await sleep(150)
+  return mockLessons
+}
+
 export async function mockGetQuizById(quizId) {
   await sleep(150)
   const quiz = mockQuizzes.find((q) => q.id === quizId)
   if (!quiz) throw new Error("Quiz not found")
   return quiz
+}
+
+export async function mockGetQuizzes() {
+  await sleep(150)
+  return mockQuizzes
 }

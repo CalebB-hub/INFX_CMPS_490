@@ -10,6 +10,8 @@ import Home from "./pages/Home";
 import Profile from "./pages/Profile";
 import Learning from "./pages/Learning";
 import Quizzes from "./pages/Quizzes";
+import QuizDetails from "./pages/QuizDetails";
+import Grades from "./pages/Grades";
 import About from "./pages/About";
 import Settings from "./pages/Settings";
 import AdminDashboard from "./pages/AdminDashboard";
@@ -35,6 +37,8 @@ export default function App() {
       <Route path="/profile/me" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
       <Route path="/learning" element={<ProtectedRoute><Learning /></ProtectedRoute>} />
       <Route path="/learning/quizzes" element={<ProtectedRoute><Quizzes /></ProtectedRoute>} />
+      <Route path="/learning/quizzes/:quizId" element={<ProtectedRoute><QuizDetails /></ProtectedRoute>} />
+      <Route path="/grades" element={<ProtectedRoute><Grades /></ProtectedRoute>} />
       <Route path="/about" element={<ProtectedRoute><About /></ProtectedRoute>} />
       <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
       <Route path="/admin" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />

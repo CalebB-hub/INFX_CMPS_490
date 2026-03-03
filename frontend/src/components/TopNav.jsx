@@ -63,6 +63,10 @@ export default function TopNav() {
           Learning
         </NavLink>
 
+        <NavLink to="/grades" className={({ isActive }) => (isActive ? "active" : "")}>
+          Grades
+        </NavLink>
+
         <NavLink to="/about" className={({ isActive }) => (isActive ? "active" : "")}>
           About
         </NavLink>

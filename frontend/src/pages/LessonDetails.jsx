@@ -55,9 +55,13 @@ export default function LessonDetails() {
             </div>
 
             <div style={{ marginTop: 16, display: "flex", gap: 10 }}>
-              <Link className="btn" to={`/learning/quizzes/${lesson.quizId}`}>
-                Start quiz →
-              </Link>
+              {lesson.quizId ? (
+                <Link className="btn" to={`/learning/quizzes/${lesson.quizId}`}>
+                  Start quiz →
+                </Link>
+              ) : (
+                <span className="muted">Quiz coming soon</span>
+              )}
             </div>
           </div>
         )}
