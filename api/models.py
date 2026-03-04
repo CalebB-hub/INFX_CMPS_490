@@ -108,13 +108,31 @@ class Assignment(models.Model):
     due_date = models.DateTimeField()
     start_date = models.DateTimeField()
 
+class Module(models.Model):
+    module_id = models.AutoField(primary_key=True)
+    title = models.CharField(max_length=255)
+    description = models.TextField()
+    difficulty_level = models.CharField(max_length=50, default='beginner')  # beginner, intermediate, advanced
+    estimated_duration = models.IntegerField(help_text='Estimated duration in minutes')
+    is_published = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
 class Lesson(models.Model):
     lesson_id = models.AutoField(primary_key=True)
+    module = models.ForeignKey(
+        Module,
+        null=True,
+        blank=True,
+        on_delete=models.CASCADE,
+        related_name='lessons'
+    )
     title = models.CharField(max_length=255)
-    score = models.DecimalField(decimal_places=2, max_digits=5)
+    score = models.DecimalField(decimal_places=2, max_digits=5, null=True, blank=True)
     user_id = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE
     )
     questions = models.TextField()
     lesson_material = models.TextField()
+    completed_at = models.DateTimeField(null=True, blank=True)
