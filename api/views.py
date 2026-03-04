@@ -7,8 +7,10 @@ from django.contrib.auth import get_user_model, authenticate
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.conf import settings
+from django.db.models import Avg, Count, Q
+from django.utils import timezone
 
-from .models import Role
+from .models import Role, Assignment, Test, Lesson, Module
 
 User = get_user_model()
 
@@ -148,6 +150,17 @@ def login(request):
 
     # Attempt authentication using email as username (we store username=email for signups)
     user = authenticate(request, username=email, password=password)
+    
+    # If authentication fails with the lowercased email, try finding the user by email
+    # and check password directly (handles case sensitivity issues)
+    if user is None:
+        try:
+            user = User.objects.get(email__iexact=email)
+            if not user.check_password(password):
+                user = None
+        except User.DoesNotExist:
+            user = None
+    
     if user is None:
         return Response(
             {'error': 'Invalid email or password.'},
@@ -289,6 +302,254 @@ def me(request):
             'firstName': user.first_name,
             'lastName': user.last_name,
             'role': user.role.role_name if user.role else None,
+        },
+        status=status.HTTP_200_OK,
+    )
+
+
+@api_view(['PATCH'])
+@permission_classes([IsAuthenticated])
+def change_password(request):
+    """
+    Change the authenticated user's password.
+    
+    Required body:
+    - currentPassword: The user's current password for verification
+    - newPassword: The new password to set
+    
+    Returns 200 on success, 400 for validation errors, 401 for incorrect current password.
+    """
+    user = request.user
+    body = request.data if getattr(request, 'data', None) is not None else {}
+    
+    # Validate required fields
+    current_password = body.get('currentPassword')
+    new_password = body.get('newPassword')
+    
+    if not current_password or not new_password:
+        missing = []
+        if not current_password:
+            missing.append('currentPassword')
+        if not new_password:
+            missing.append('newPassword')
+        return Response(
+            {'error': 'Missing required fields.', 'fields': missing},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+    
+    # Verify current password
+    if not user.check_password(current_password):
+        return Response(
+            {'error': 'Current password is incorrect.'},
+            status=status.HTTP_401_UNAUTHORIZED,
+        )
+    
+    # Validate new password against Django password validators
+    try:
+        validate_password(new_password, user=user)
+    except DjangoValidationError as e:
+        return Response(
+            {'error': 'New password does not meet requirements.', 'details': e.messages},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+    
+    # Check if new password is same as current
+    if user.check_password(new_password):
+        return Response(
+            {'error': 'New password must be different from current password.'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+    
+    # Set new password
+    user.set_password(new_password)
+    user.save()
+    
+    return Response(
+        {'message': 'Password changed successfully.'},
+        status=status.HTTP_200_OK,
+    )
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def dashboard_me(request):
+    """
+    Returns comprehensive dashboard data for the authenticated user including:
+    - User profile information
+    - Assignment statistics (pending, completed, overdue)
+    - Test performance metrics
+    - Recent activity
+    """
+    user = request.user
+    now = timezone.now()
+    
+    # Get assignments
+    assignments = Assignment.objects.filter(user=user)
+    
+    # An assignment is pending if it's not past due
+    pending_assignments = assignments.filter(
+        due_date__gte=now
+    ).order_by('due_date')[:5]
+    
+    # An assignment is overdue if it's past the due date
+    overdue_assignments = assignments.filter(
+        due_date__lt=now
+    ).order_by('due_date')
+    
+    # Get test statistics
+    user_tests = Test.objects.filter(user_id=user)
+    test_stats = user_tests.aggregate(
+        total_tests=Count('test_id'),
+        average_score=Avg('score')
+    )
+    
+    # Get recent tests
+    recent_tests = user_tests.order_by('-date_taken')[:5].values(
+        'test_id', 'title', 'score', 'date_taken'
+    )
+    
+    # Get lessons progress
+    user_lessons = Lesson.objects.filter(user_id=user)
+    lesson_stats = user_lessons.aggregate(
+        total_lessons=Count('lesson_id'),
+        average_score=Avg('score')
+    )
+    
+    # Format pending assignments
+    pending_list = [
+        {
+            'assignmentId': a.assignment_id,
+            'testTitle': a.test_id.title if a.test_id else 'Untitled',
+            'dueDate': a.due_date.isoformat(),
+            'startDate': a.start_date.isoformat(),
+        }
+        for a in pending_assignments
+    ]
+    
+    # Format overdue assignments
+    overdue_list = [
+        {
+            'assignmentId': a.assignment_id,
+            'testTitle': a.test_id.title if a.test_id else 'Untitled',
+            'dueDate': a.due_date.isoformat(),
+            'daysPastDue': (now - a.due_date).days,
+        }
+        for a in overdue_assignments
+    ]
+    
+    # Format recent tests
+    recent_tests_list = [
+        {
+            'testId': t['test_id'],
+            'title': t['title'],
+            'score': float(t['score']) if t['score'] else 0,
+            'dateTaken': t['date_taken'].isoformat(),
+        }
+        for t in recent_tests
+    ]
+    
+    return Response(
+        {
+            'user': {
+                'id': str(user.user_id),
+                'email': user.email,
+                'firstName': user.first_name,
+                'lastName': user.last_name,
+                'role': user.role.role_name if user.role else None,
+                'company': user.company.name if user.company else None,
+            },
+            'assignments': {
+                'pending': pending_list,
+                'overdue': overdue_list,
+                'totalPending': pending_assignments.count(),
+                'totalOverdue': overdue_assignments.count(),
+            },
+            'tests': {
+                'totalCompleted': test_stats['total_tests'] or 0,
+                'averageScore': float(test_stats['average_score']) if test_stats['average_score'] else 0,
+                'recentTests': recent_tests_list,
+            },
+            'lessons': {
+                'totalCompleted': lesson_stats['total_lessons'] or 0,
+                'averageScore': float(lesson_stats['average_score']) if lesson_stats['average_score'] else 0,
+            },
+        },
+        status=status.HTTP_200_OK,
+    )
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def learning_modules(request):
+    """
+    Returns learning modules based on the scope parameter.
+    
+    Query Parameters:
+    - scope: Defines which modules to return
+      - 'me': Returns modules with user's progress (completed lessons, scores)
+      - 'all': Returns all published modules (default)
+    
+    Returns list of modules with:
+    - Module details (id, title, description, difficulty, duration)
+    - Lesson count
+    - For scope=me: user's progress, completed lessons, average score
+    """
+    scope = request.query_params.get('scope', 'all')
+    user = request.user
+    
+    # Get all published modules
+    modules = Module.objects.filter(is_published=True).order_by('created_at')
+    
+    modules_list = []
+    
+    for module in modules:
+        # Get all lessons in this module
+        module_lessons = Lesson.objects.filter(module=module)
+        total_lessons = module_lessons.count()
+        
+        module_data = {
+            'moduleId': module.module_id,
+            'title': module.title,
+            'description': module.description,
+            'difficultyLevel': module.difficulty_level,
+            'estimatedDuration': module.estimated_duration,
+            'totalLessons': total_lessons,
+        }
+        
+        if scope == 'me':
+            # Get user's lessons for this module
+            user_lessons = module_lessons.filter(user_id=user)
+            completed_lessons = user_lessons.filter(completed_at__isnull=False)
+            
+            # Calculate progress
+            completed_count = completed_lessons.count()
+            progress_percentage = (completed_count / total_lessons * 100) if total_lessons > 0 else 0
+            
+            # Calculate average score for completed lessons
+            avg_score = completed_lessons.aggregate(avg=Avg('score'))['avg']
+            
+            # Get recent activity
+            last_activity = user_lessons.order_by('-completed_at').first()
+            
+            module_data.update({
+                'progress': {
+                    'completedLessons': completed_count,
+                    'totalLessons': total_lessons,
+                    'progressPercentage': round(progress_percentage, 2),
+                    'averageScore': float(avg_score) if avg_score else None,
+                    'lastActivity': last_activity.completed_at.isoformat() if last_activity and last_activity.completed_at else None,
+                },
+                'isStarted': user_lessons.exists(),
+                'isCompleted': completed_count == total_lessons and total_lessons > 0,
+            })
+        
+        modules_list.append(module_data)
+    
+    return Response(
+        {
+            'modules': modules_list,
+            'totalModules': len(modules_list),
+            'scope': scope,
         },
         status=status.HTTP_200_OK,
     )
