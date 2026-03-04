@@ -3,8 +3,9 @@ from django.utils import timezone
 from rest_framework.test import APITestCase, APIClient
 from django.urls import reverse
 from rest_framework_simplejwt.tokens import RefreshToken
+from datetime import timedelta
 
-from .models import Role, Company, User, Test as TestModel
+from .models import Role, Company, User, Test as TestModel, Module, Lesson, Assignment
 from .services import (
     user_service,
     company_service,
@@ -150,6 +151,71 @@ class AuthEndpointTests(APITestCase):
         resp = self.client.post(reverse('logout'), {}, format='json')
         self.assertEqual(resp.status_code, 400)
 
+    def test_signup_and_login(self):
+        """Test that a newly created user can log in."""
+        client = APIClient()
+        
+        # Sign up with new user
+        signup_resp = client.post(
+            reverse('signup'),
+            {
+                'email': 'newuser@example.com',
+                'password': 'NewPass123!',
+                'firstName': 'New',
+                'lastName': 'User',
+            },
+            format='json'
+        )
+        
+        self.assertEqual(signup_resp.status_code, 201)
+        self.assertEqual(signup_resp.data['email'], 'newuser@example.com')
+        
+        # Now try to log in with the new user
+        login_resp = client.post(
+            reverse('login'),
+            {
+                'email': 'newuser@example.com',
+                'password': 'NewPass123!',
+            },
+            format='json'
+        )
+        
+        self.assertEqual(login_resp.status_code, 200)
+        self.assertIn('accessToken', login_resp.data)
+        self.assertIn('refreshToken', login_resp.data)
+        self.assertEqual(login_resp.data['user']['email'], 'newuser@example.com')
+
+    def test_login_case_insensitive_email(self):
+        """Test that login works with different email cases."""
+        client = APIClient()
+        
+        # Sign up with lowercase email
+        signup_resp = client.post(
+            reverse('signup'),
+            {
+                'email': 'casetest@example.com',
+                'password': 'CasePass123!',
+                'firstName': 'Case',
+                'lastName': 'Test',
+            },
+            format='json'
+        )
+        
+        self.assertEqual(signup_resp.status_code, 201)
+        
+        # Try to log in with uppercase email
+        login_resp = client.post(
+            reverse('login'),
+            {
+                'email': 'CASETEST@EXAMPLE.COM',
+                'password': 'CasePass123!',
+            },
+            format='json'
+        )
+        
+        self.assertEqual(login_resp.status_code, 200)
+        self.assertIn('accessToken', login_resp.data)
+
 class UserProfileTests(TestCase):
     def setUp(self):
         role, _ = Role.objects.get_or_create(
@@ -172,3 +238,387 @@ class UserProfileTests(TestCase):
         resp = client.get(reverse('me'))
         self.assertEqual(resp.status_code, 200)
         self.assertEqual(resp.data['email'], self.user.email)
+
+
+class DashboardEndpointTests(APITestCase):
+    """Tests for GET /api/dashboard/me endpoint."""
+
+    def setUp(self):
+        # Create role and user
+        self.role, _ = Role.objects.get_or_create(
+            role_name='User',
+            defaults={'description': 'default', 'permissions': ''}
+        )
+        self.company = Company.objects.create(name='Test Corp', location='Test City')
+        self.user = User.objects.create_user(
+            username='dashboard@example.com',
+            email='dashboard@example.com',
+            password='testpass123',
+            first_name='Dashboard',
+            last_name='User',
+            role=self.role,
+            company=self.company,
+        )
+        
+        # Create test data
+        self.test1 = TestModel.objects.create(
+            title='Python Basics',
+            description='Test description',
+            score=85.5,
+            date_taken=timezone.now() - timedelta(days=2),
+            user_id=self.user,
+        )
+        self.test2 = TestModel.objects.create(
+            title='Advanced Python',
+            description='Test description',
+            score=92.0,
+            date_taken=timezone.now() - timedelta(days=1),
+            user_id=self.user,
+        )
+        
+        # Create assignments
+        self.assignment_pending = Assignment.objects.create(
+            user=self.user,
+            company_id=self.company,
+            test_id=self.test1,
+            due_date=timezone.now() + timedelta(days=5),
+            start_date=timezone.now(),
+        )
+        self.assignment_overdue = Assignment.objects.create(
+            user=self.user,
+            company_id=self.company,
+            test_id=self.test2,
+            due_date=timezone.now() - timedelta(days=3),
+            start_date=timezone.now() - timedelta(days=10),
+        )
+        
+        # Create lessons
+        self.lesson1 = Lesson.objects.create(
+            title='Intro to Variables',
+            score=88.0,
+            user_id=self.user,
+            questions='[]',
+            lesson_material='Material here',
+            completed_at=timezone.now() - timedelta(days=1),
+        )
+
+    def test_dashboard_me_success(self):
+        """Test successful dashboard data retrieval."""
+        client = APIClient()
+        token = RefreshToken.for_user(self.user).access_token
+        client.credentials(HTTP_AUTHORIZATION=f'Bearer {token}')
+        
+        resp = client.get(reverse('dashboard_me'))
+        
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn('user', resp.data)
+        self.assertIn('assignments', resp.data)
+        self.assertIn('tests', resp.data)
+        self.assertIn('lessons', resp.data)
+        
+        # Check user data
+        self.assertEqual(resp.data['user']['email'], self.user.email)
+        self.assertEqual(resp.data['user']['firstName'], 'Dashboard')
+        self.assertEqual(resp.data['user']['company'], 'Test Corp')
+        
+        # Check assignments data
+        self.assertGreater(resp.data['assignments']['totalPending'], 0)
+        self.assertGreater(resp.data['assignments']['totalOverdue'], 0)
+        
+        # Check tests data
+        self.assertEqual(resp.data['tests']['totalCompleted'], 2)
+        self.assertGreater(resp.data['tests']['averageScore'], 0)
+        
+        # Check lessons data
+        self.assertEqual(resp.data['lessons']['totalCompleted'], 1)
+
+    def test_dashboard_me_requires_authentication(self):
+        """Test that dashboard endpoint requires authentication."""
+        client = APIClient()
+        resp = client.get(reverse('dashboard_me'))
+        self.assertEqual(resp.status_code, 401)
+
+
+class ChangePasswordEndpointTests(APITestCase):
+    """Tests for PATCH /api/users/me/password endpoint."""
+
+    def setUp(self):
+        self.role, _ = Role.objects.get_or_create(
+            role_name='User',
+            defaults={'description': 'default', 'permissions': ''}
+        )
+        self.user = User.objects.create_user(
+            username='password@example.com',
+            email='password@example.com',
+            password='OldPass123!',
+            first_name='Password',
+            last_name='Tester',
+            role=self.role,
+        )
+
+    def test_change_password_success(self):
+        """Test successful password change."""
+        client = APIClient()
+        token = RefreshToken.for_user(self.user).access_token
+        client.credentials(HTTP_AUTHORIZATION=f'Bearer {token}')
+        
+        resp = client.patch(
+            reverse('change_password'),
+            {
+                'currentPassword': 'OldPass123!',
+                'newPassword': 'NewPass456!',
+            },
+            format='json'
+        )
+        
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn('message', resp.data)
+        
+        # Verify password was changed
+        self.user.refresh_from_db()
+        self.assertTrue(self.user.check_password('NewPass456!'))
+        self.assertFalse(self.user.check_password('OldPass123!'))
+
+    def test_change_password_wrong_current(self):
+        """Test password change with incorrect current password."""
+        client = APIClient()
+        token = RefreshToken.for_user(self.user).access_token
+        client.credentials(HTTP_AUTHORIZATION=f'Bearer {token}')
+        
+        resp = client.patch(
+            reverse('change_password'),
+            {
+                'currentPassword': 'WrongPass123!',
+                'newPassword': 'NewPass456!',
+            },
+            format='json'
+        )
+        
+        self.assertEqual(resp.status_code, 401)
+        self.assertIn('error', resp.data)
+
+    def test_change_password_same_as_current(self):
+        """Test that new password cannot be same as current."""
+        client = APIClient()
+        token = RefreshToken.for_user(self.user).access_token
+        client.credentials(HTTP_AUTHORIZATION=f'Bearer {token}')
+        
+        resp = client.patch(
+            reverse('change_password'),
+            {
+                'currentPassword': 'OldPass123!',
+                'newPassword': 'OldPass123!',
+            },
+            format='json'
+        )
+        
+        self.assertEqual(resp.status_code, 400)
+        self.assertIn('error', resp.data)
+
+    def test_change_password_weak_password(self):
+        """Test password change with weak password."""
+        client = APIClient()
+        token = RefreshToken.for_user(self.user).access_token
+        client.credentials(HTTP_AUTHORIZATION=f'Bearer {token}')
+        
+        resp = client.patch(
+            reverse('change_password'),
+            {
+                'currentPassword': 'OldPass123!',
+                'newPassword': 'weak',
+            },
+            format='json'
+        )
+        
+        self.assertEqual(resp.status_code, 400)
+        self.assertIn('error', resp.data)
+
+    def test_change_password_missing_fields(self):
+        """Test password change with missing fields."""
+        client = APIClient()
+        token = RefreshToken.for_user(self.user).access_token
+        client.credentials(HTTP_AUTHORIZATION=f'Bearer {token}')
+        
+        resp = client.patch(
+            reverse('change_password'),
+            {'currentPassword': 'OldPass123!'},
+            format='json'
+        )
+        
+        self.assertEqual(resp.status_code, 400)
+        self.assertIn('fields', resp.data)
+
+    def test_change_password_requires_authentication(self):
+        """Test that password change requires authentication."""
+        client = APIClient()
+        resp = client.patch(
+            reverse('change_password'),
+            {
+                'currentPassword': 'OldPass123!',
+                'newPassword': 'NewPass456!',
+            },
+            format='json'
+        )
+        self.assertEqual(resp.status_code, 401)
+
+
+class LearningModulesEndpointTests(APITestCase):
+    """Tests for GET /api/learning/modules endpoint."""
+
+    def setUp(self):
+        # Create role and user
+        self.role, _ = Role.objects.get_or_create(
+            role_name='User',
+            defaults={'description': 'default', 'permissions': ''}
+        )
+        self.user = User.objects.create_user(
+            username='learning@example.com',
+            email='learning@example.com',
+            password='testpass123',
+            first_name='Learning',
+            last_name='User',
+            role=self.role,
+        )
+        
+        # Create modules
+        self.module1 = Module.objects.create(
+            title='Python Fundamentals',
+            description='Learn Python basics',
+            difficulty_level='beginner',
+            estimated_duration=120,
+            is_published=True,
+        )
+        self.module2 = Module.objects.create(
+            title='Advanced Python',
+            description='Advanced Python topics',
+            difficulty_level='advanced',
+            estimated_duration=180,
+            is_published=True,
+        )
+        self.module3 = Module.objects.create(
+            title='Unpublished Module',
+            description='This should not appear',
+            difficulty_level='intermediate',
+            estimated_duration=90,
+            is_published=False,
+        )
+        
+        # Create lessons for module1
+        self.lesson1 = Lesson.objects.create(
+            module=self.module1,
+            title='Variables and Data Types',
+            score=90.0,
+            user_id=self.user,
+            questions='[]',
+            lesson_material='Material',
+            completed_at=timezone.now() - timedelta(days=2),
+        )
+        self.lesson2 = Lesson.objects.create(
+            module=self.module1,
+            title='Control Flow',
+            score=85.0,
+            user_id=self.user,
+            questions='[]',
+            lesson_material='Material',
+            completed_at=timezone.now() - timedelta(days=1),
+        )
+        
+        # Create incomplete lesson for module1
+        self.lesson3 = Lesson.objects.create(
+            module=self.module1,
+            title='Functions',
+            user_id=self.user,
+            questions='[]',
+            lesson_material='Material',
+            completed_at=None,
+        )
+
+    def test_learning_modules_scope_me(self):
+        """Test learning modules with scope=me."""
+        client = APIClient()
+        token = RefreshToken.for_user(self.user).access_token
+        client.credentials(HTTP_AUTHORIZATION=f'Bearer {token}')
+        
+        resp = client.get(reverse('learning_modules'), {'scope': 'me'})
+        
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn('modules', resp.data)
+        self.assertIn('totalModules', resp.data)
+        self.assertEqual(resp.data['scope'], 'me')
+        
+        # Should only return published modules
+        self.assertEqual(resp.data['totalModules'], 2)
+        
+        # Check module structure with progress
+        module = resp.data['modules'][0]
+        self.assertIn('moduleId', module)
+        self.assertIn('title', module)
+        self.assertIn('description', module)
+        self.assertIn('difficultyLevel', module)
+        self.assertIn('estimatedDuration', module)
+        self.assertIn('totalLessons', module)
+        self.assertIn('progress', module)
+        self.assertIn('isStarted', module)
+        self.assertIn('isCompleted', module)
+        
+        # Check progress data for module1
+        if module['title'] == 'Python Fundamentals':
+            self.assertEqual(module['progress']['completedLessons'], 2)
+            self.assertEqual(module['progress']['totalLessons'], 3)
+            self.assertGreater(module['progress']['progressPercentage'], 0)
+            self.assertIsNotNone(module['progress']['averageScore'])
+            self.assertTrue(module['isStarted'])
+            self.assertFalse(module['isCompleted'])
+
+    def test_learning_modules_scope_all(self):
+        """Test learning modules with scope=all."""
+        client = APIClient()
+        token = RefreshToken.for_user(self.user).access_token
+        client.credentials(HTTP_AUTHORIZATION=f'Bearer {token}')
+        
+        resp = client.get(reverse('learning_modules'), {'scope': 'all'})
+        
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.data['scope'], 'all')
+        
+        # Should only return published modules
+        self.assertEqual(resp.data['totalModules'], 2)
+        
+        # Check that progress data is NOT included
+        module = resp.data['modules'][0]
+        self.assertNotIn('progress', module)
+        self.assertNotIn('isStarted', module)
+        self.assertNotIn('isCompleted', module)
+
+    def test_learning_modules_default_scope(self):
+        """Test learning modules without scope parameter (defaults to 'all')."""
+        client = APIClient()
+        token = RefreshToken.for_user(self.user).access_token
+        client.credentials(HTTP_AUTHORIZATION=f'Bearer {token}')
+        
+        resp = client.get(reverse('learning_modules'))
+        
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.data['scope'], 'all')
+
+    def test_learning_modules_requires_authentication(self):
+        """Test that learning modules endpoint requires authentication."""
+        client = APIClient()
+        resp = client.get(reverse('learning_modules'), {'scope': 'me'})
+        self.assertEqual(resp.status_code, 401)
+
+    def test_learning_modules_excludes_unpublished(self):
+        """Test that unpublished modules are not returned."""
+        client = APIClient()
+        token = RefreshToken.for_user(self.user).access_token
+        client.credentials(HTTP_AUTHORIZATION=f'Bearer {token}')
+        
+        resp = client.get(reverse('learning_modules'), {'scope': 'all'})
+        
+        self.assertEqual(resp.status_code, 200)
+        
+        # Verify unpublished module is not in results
+        module_titles = [m['title'] for m in resp.data['modules']]
+        self.assertNotIn('Unpublished Module', module_titles)
+        self.assertIn('Python Fundamentals', module_titles)
+        self.assertIn('Advanced Python', module_titles)
