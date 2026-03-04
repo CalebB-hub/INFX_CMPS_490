@@ -127,3 +127,4 @@ python3 manage.py test api -v 2
 - Tests verify both success and error cases
 - Response data structure is validated
 - Edge cases are covered (missing fields, wrong passwords, unpublished content)
+

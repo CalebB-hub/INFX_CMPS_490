@@ -657,3 +657,4 @@ class LearningModulesEndpointTests(APITestCase):
         self.assertNotIn('Unpublished Module', module_titles)
         self.assertIn('Python Fundamentals', module_titles)
         self.assertIn('Advanced Python', module_titles)
+
