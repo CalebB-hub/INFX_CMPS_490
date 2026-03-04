@@ -80,23 +80,36 @@ export default function Grades() {
             {quizzes.map((quiz) => {
               const grade = gradesByQuizId[quiz.id]
               const lessonTitle = lessonTitleById.get(quiz.lessonId) || "Lesson"
+              const lessonLink = quiz.lessonId
+                ? `/learning/lessons/${quiz.lessonId}`
+                : null
               return (
                 <div className="card" key={quiz.id}>
                   <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                     <div style={{ flex: 1 }}>
-                      <div style={{ fontWeight: 600 }}>{quiz.title}</div>
+                      {lessonLink ? (
+                        <Link
+                          to={lessonLink}
+                          style={{
+                            fontWeight: 600,
+                            color: "inherit",
+                            textDecoration: "none",
+                          }}
+                        >
+                          {quiz.title}
+                        </Link>
+                      ) : (
+                        <div style={{ fontWeight: 600 }}>{quiz.title}</div>
+                      )}
                       <div className="muted" style={{ marginTop: 4 }}>
                         {lessonTitle}
                       </div>
-                      <div className="muted" style={{ marginTop: 4 }}>
-                        {grade
-                          ? `Score: ${grade.score}/${grade.total} · ${grade.percent}%`
-                          : "Not taken yet"}
-                      </div>
                     </div>
-                    <Link className="btn" to={`/learning/quizzes/${quiz.id}`}>
-                      {grade ? "Retake quiz" : "Take quiz"}
-                    </Link>
+                    <div className="muted" style={{ textAlign: "right", minWidth: 140 }}>
+                      {grade
+                        ? `Score: ${grade.score}/${grade.total} · ${grade.percent}%`
+                        : "Not taken yet"}
+                    </div>
                   </div>
                 </div>
               )

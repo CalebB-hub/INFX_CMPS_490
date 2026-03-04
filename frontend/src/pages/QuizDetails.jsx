@@ -85,6 +85,12 @@ export default function QuizDetails() {
               {quiz.questions?.map((q, idx) => {
                 const key = q.id || `${idx}`
                 const selected = answers[key]
+                const isCorrect =
+                  submitted && selected !== undefined && selected === q.correctIndex
+                const correctOption =
+                  q.options && q.correctIndex !== undefined
+                    ? q.options[q.correctIndex]
+                    : ""
                 return (
                   <div key={key} className="card" style={{ padding: 16 }}>
                     <div style={{ fontWeight: 600, marginBottom: 8 }}>
@@ -94,7 +100,13 @@ export default function QuizDetails() {
                       {q.options?.map((option, optionIdx) => (
                         <label
                           key={`${key}-${optionIdx}`}
-                          style={{ display: "flex", alignItems: "center", gap: 8 }}
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 8,
+                            fontWeight:
+                              submitted && optionIdx === q.correctIndex ? 600 : 400,
+                          }}
                         >
                           <input
                             type="radio"
@@ -109,6 +121,14 @@ export default function QuizDetails() {
                         </label>
                       ))}
                     </div>
+                    {submitted && (
+                      <div className="muted" style={{ marginTop: 8 }}>
+                        {isCorrect ? "Correct" : "Incorrect"}
+                        {!isCorrect && correctOption
+                          ? ` · Correct answer: ${correctOption}`
+                          : ""}
+                      </div>
+                    )}
                   </div>
                 )
               })}
@@ -130,15 +150,19 @@ export default function QuizDetails() {
               )}
               {submitted && (
                 <span style={{ fontWeight: 600 }}>
-                  Score: {finalScore ?? 0}/{totalQuestions}
+                  Score: {finalScore ?? 0}/{totalQuestions} ·{" "}
+                  {totalQuestions > 0
+                    ? Math.round(((finalScore ?? 0) / totalQuestions) * 100)
+                    : 0}
+                  %
                 </span>
               )}
             </div>
 
-            {quiz.lessonId && (
+            {submitted && (
               <div style={{ marginTop: 16 }}>
-                <Link className="btn" to={`/learning/lessons/${quiz.lessonId}`}>
-                  Back to lesson
+                <Link className="btn" to="/learning">
+                  Return to lessons
                 </Link>
               </div>
             )}
