@@ -239,6 +239,40 @@ class UserProfileTests(TestCase):
         self.assertEqual(resp.status_code, 200)
         self.assertEqual(resp.data['email'], self.user.email)
 
+    def test_patch_profile_updates_allowed_fields(self):
+        client = APIClient()
+        token = RefreshToken.for_user(self.user).access_token
+        client.credentials(HTTP_AUTHORIZATION=f'Bearer {token}')
+
+        payload = {
+            'firstName': 'Alicia',
+            'lastName': 'Updated',
+            'email': 'alicia@example.com',
+        }
+        resp = client.patch(reverse('me'), payload, format='json')
+
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.data['firstName'], 'Alicia')
+        self.assertEqual(resp.data['lastName'], 'Updated')
+        self.assertEqual(resp.data['email'], 'alicia@example.com')
+
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.first_name, 'Alicia')
+        self.assertEqual(self.user.last_name, 'Updated')
+        self.assertEqual(self.user.email, 'alicia@example.com')
+        self.assertEqual(self.user.username, 'alicia@example.com')
+
+    def test_patch_profile_rejects_non_editable_fields(self):
+        client = APIClient()
+        token = RefreshToken.for_user(self.user).access_token
+        client.credentials(HTTP_AUTHORIZATION=f'Bearer {token}')
+
+        resp = client.patch(reverse('me'), {'role': 'Admin'}, format='json')
+
+        self.assertEqual(resp.status_code, 400)
+        self.assertIn('fields', resp.data)
+        self.assertIn('role', resp.data['fields'])
+
 
 class DashboardEndpointTests(APITestCase):
     """Tests for GET /api/dashboard/me endpoint."""

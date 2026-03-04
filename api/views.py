@@ -211,14 +211,90 @@ def logout(request):
     
     return Response(status=status.HTTP_204_NO_CONTENT)
 
-@api_view(['GET'])
+@api_view(['GET', 'PATCH'])
 @permission_classes([IsAuthenticated])
 def me(request):
     """
-    Returns the current user's profile information
+    Returns the current user's profile information (GET)
+    or partially updates editable profile fields (PATCH).
     """
-
     user = request.user
+
+    if request.method == 'PATCH':
+        body = request.data if getattr(request, 'data', None) is not None else {}
+        if not isinstance(body, dict):
+            return Response(
+                {'error': 'Request body must be JSON object.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        editable_fields = {'firstName', 'lastName', 'email'}
+        provided_fields = set(body.keys())
+        invalid_fields = sorted(list(provided_fields - editable_fields))
+
+        if invalid_fields:
+            return Response(
+                {
+                    'error': 'One or more fields are not editable.',
+                    'fields': invalid_fields,
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        has_changes = False
+
+        if 'firstName' in body:
+            first_name = str(body.get('firstName', '')).strip()
+            if not first_name:
+                return Response(
+                    {'error': 'firstName cannot be empty.', 'fields': ['firstName']},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            if first_name != user.first_name:
+                user.first_name = first_name
+                has_changes = True
+
+        if 'lastName' in body:
+            last_name = str(body.get('lastName', '')).strip()
+            if not last_name:
+                return Response(
+                    {'error': 'lastName cannot be empty.', 'fields': ['lastName']},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            if last_name != user.last_name:
+                user.last_name = last_name
+                has_changes = True
+
+        if 'email' in body:
+            email = str(body.get('email', '')).strip().lower()
+            if not email:
+                return Response(
+                    {'error': 'email cannot be empty.', 'fields': ['email']},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            if '@' not in email or '.' not in email.split('@')[-1]:
+                return Response(
+                    {'error': 'Invalid email format.', 'fields': ['email']},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            if User.objects.filter(email__iexact=email).exclude(user_id=user.user_id).exists():
+                return Response(
+                    {'error': 'A user with this email already exists.'},
+                    status=status.HTTP_409_CONFLICT,
+                )
+            if email != user.email:
+                user.email = email
+                user.username = email
+                has_changes = True
+
+        if not has_changes:
+            return Response(
+                {'error': 'No valid changes provided.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        user.save()
+
     return Response(
         {
             'id': str(user.user_id),
