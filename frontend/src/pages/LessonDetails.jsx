@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { Link, useParams } from "react-router-dom"
 import TopNav from "../components/TopNav"
 import { mockGetLessonById } from "../mock/mockApi"
@@ -24,6 +24,17 @@ export default function LessonDetails() {
       mounted = false
     }
   }, [lessonId])
+
+  const quizGrade = useMemo(() => {
+    if (!lesson?.quizId) return null
+    try {
+      const raw = localStorage.getItem("quizGrades")
+      const parsed = raw ? JSON.parse(raw) : {}
+      return parsed[lesson.quizId] || null
+    } catch (e) {
+      return null
+    }
+  }, [lesson?.quizId])
 
   return (
     <div>
@@ -57,12 +68,17 @@ export default function LessonDetails() {
             <div style={{ marginTop: 16, display: "flex", gap: 10 }}>
               {lesson.quizId ? (
                 <Link className="btn" to={`/learning/quizzes/${lesson.quizId}`}>
-                  Start quiz →
+                  {quizGrade ? "Review quiz →" : "Start quiz →"}
                 </Link>
               ) : (
                 <span className="muted">Quiz coming soon</span>
               )}
             </div>
+            {quizGrade && (
+              <div className="muted" style={{ marginTop: 10 }}>
+                Quiz score: {quizGrade.score}/{quizGrade.total} · {quizGrade.percent}%
+              </div>
+            )}
           </div>
         )}
       </main>
