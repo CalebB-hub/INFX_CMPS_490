@@ -1,9 +1,10 @@
+from datetime import timedelta
+
 from django.test import TestCase
 from django.utils import timezone
 from rest_framework.test import APITestCase, APIClient
 from django.urls import reverse
 from rest_framework_simplejwt.tokens import RefreshToken
-from datetime import timedelta
 
 from .models import Role, Company, User, Test as TestModel, Module, Lesson, Assignment
 from .services import (
