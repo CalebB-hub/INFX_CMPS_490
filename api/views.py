@@ -10,6 +10,8 @@ from django.conf import settings
 from django.db.models import Avg, Count, Q
 from django.utils import timezone
 
+import google.generativeai as genai
+
 from .models import Role, Assignment, Test, Lesson, Module
 
 User = get_user_model()
@@ -553,3 +555,37 @@ def learning_modules(request):
         },
         status=status.HTTP_200_OK,
     )
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def generate_content(request):
+    """
+    Send a prompt to Gemini and return generated text.
+    Body: { "prompt": string }
+    """
+    api_key = getattr(settings, 'GEMINI_API_KEY', None)
+    if not api_key:
+        return Response(
+            {'error': 'GEMINI_API_KEY is not configured.'},
+            status=status.HTTP_503_SERVICE_UNAVAILABLE,
+        )
+
+    body = request.data if getattr(request, 'data', None) else {}
+    prompt = body.get('prompt')
+    if not prompt or not str(prompt).strip():
+        return Response(
+            {'error': 'prompt is required.'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    try:
+        genai.configure(api_key=api_key)
+        model = genai.GenerativeModel('gemini-2.0-flash')
+        response = model.generate_content(str(prompt).strip())
+        return Response({'text': response.text}, status=status.HTTP_200_OK)
+    except Exception as e:
+        return Response(
+            {'error': f'Gemini API error: {str(e)}'},
+            status=status.HTTP_502_BAD_GATEWAY,
+        )
