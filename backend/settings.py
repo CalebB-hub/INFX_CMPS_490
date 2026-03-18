@@ -13,6 +13,7 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 from pathlib import Path
 import os
 from dotenv import load_dotenv
+import dj_database_url
 
 # load environment vars from .env
 load_dotenv()
@@ -86,10 +87,9 @@ WSGI_APPLICATION = 'backend.wsgi.application'
 # Set USE_SQLITE=1 in .env to use SQLite (no PostgreSQL needed). Remove it to use PostgreSQL.
 if os.getenv('USE_SQLITE') == '1' or not os.getenv('DB_NAME'):
     DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': BASE_DIR / 'db.sqlite3',
-        }
+        'default': dj_database_url.config(
+         default=os.environ.get('postgresql://infx_490_db_gjyt_user:T57TDbhRR1tC8aOfWXn6N6yOA4TNjniE@dpg-d6s6fcp5pdvs73fga3qg-a.ohio-postgres.render.com/infx_490_db_gjyt')
+     )
     }
 else:
     DATABASES = {
