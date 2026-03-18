@@ -2,7 +2,34 @@ import { Link } from "react-router-dom";
 import { useEffect, useState } from "react";
 import TopNav from "../components/TopNav";
 
-const API_BASE = "http://localhost:8000/api";
+const API_BASES = ["http://localhost:8000/api", "/api"];
+
+async function fetchModules(token) {
+  let lastError = null;
+
+  for (const base of API_BASES) {
+    try {
+      const response = await fetch(`${base}/learning/modules?scope=me`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      const raw = await response.text();
+      const data = raw ? JSON.parse(raw) : {};
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to load modules");
+      }
+
+      return data.modules || [];
+    } catch (error) {
+      lastError = error;
+    }
+  }
+
+  throw lastError || new Error("Failed to load modules");
+}
 
 export default function Learning() {
   const [modules, setModules] = useState([]);
@@ -15,19 +42,15 @@ export default function Learning() {
     async function loadModules() {
       try {
         const token = localStorage.getItem("pf_auth_token");
-        const response = await fetch(`${API_BASE}/learning/modules?scope=me`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
 
-        const data = await response.json();
-        if (!response.ok) {
-          throw new Error(data.error || "Failed to load modules");
+        if (!token) {
+          throw new Error("You are not logged in.");
         }
 
+        const loadedModules = await fetchModules(token);
+
         if (!mounted) return;
-        setModules(data.modules || []);
+        setModules(loadedModules);
       } catch (e) {
         if (!mounted) return;
         setError(e.message || "Failed to load modules");
@@ -51,9 +74,17 @@ export default function Learning() {
         <h2>Assigned Lessons</h2>
 
         {loading && <p className="muted">Loading modules...</p>}
-        {error && <p className="muted">{error}</p>}
+        {!loading && error && <div className="alert alert--error">{error}</div>}
 
-        {!loading && !error && (
+        {!loading && !error && modules.length === 0 && (
+          <div className="card">
+            <p className="muted" style={{ margin: 0 }}>
+              No published learning modules were returned by the backend yet.
+            </p>
+          </div>
+        )}
+
+        {!loading && !error && modules.length > 0 && (
           <div style={{ display: "grid", gap: 6 }}>
             {modules.map((module) => (
               <div className="card" key={module.moduleId}>
@@ -65,7 +96,9 @@ export default function Learning() {
                     </div>
                     <div className="muted" style={{ marginTop: 6 }}>
                       {module.totalLessons} lessons
-                      {module.progress ? ` · ${Math.round(module.progress.progressPercentage)}% complete` : ""}
+                      {module.progress
+                        ? ` · ${Math.round(module.progress.progressPercentage || 0)}% complete`
+                        : ""}
                     </div>
                   </div>
 
