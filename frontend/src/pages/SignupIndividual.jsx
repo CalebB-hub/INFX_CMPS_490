@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { mockSignup } from "../mock/mockApi";
 import PasswordStrength from "../components/PasswordStrength";
 import PasswordToggleIcon from "../components/PasswordToggleIcon";
 import { computeChecks } from "../utils/passwordUtils";
+
+const API_BASE = "http://localhost:8000/api";
 
 export default function SignupIndividual() {
   const navigate = useNavigate();
@@ -17,13 +18,36 @@ export default function SignupIndividual() {
     setStatus({ loading: true, error: "", success: "" });
 
     try {
-      await mockSignup({ ...formData, role: "individual" });
+      const [firstName, ...rest] = formData.name.trim().split(/\s+/);
+      const lastName = rest.join(" ");
+
+      if (!firstName || !lastName) {
+        throw new Error("Please enter both a first and last name.");
+      }
+
+      const response = await fetch(`${API_BASE}/auth/signup/`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email: formData.email.trim(),
+          password: formData.password,
+          firstName,
+          lastName,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.details?.join(" ") || data.error || "Unable to create account.");
+      }
+
       setStatus({ loading: false, success: "Success! Redirecting to login...", error: "" });
-      
-      // The Reroute: waits 2 seconds then moves to /login
-      setTimeout(() => navigate("/login"), 2000); 
+      setTimeout(() => navigate("/login"), 2000);
     } catch (err) {
-      setStatus({ loading: false, error: err.message, success: "" });
+      setStatus({ loading: false, error: err.message || "Unable to create account.", success: "" });
     }
   }
 
@@ -33,10 +57,24 @@ export default function SignupIndividual() {
         <h2>Individual Signup</h2>
         {status.error && <div className="alert alert--error">{status.error}</div>}
         {status.success && <div className="alert alert--success">{status.success}</div>}
-        
+
         <form className="auth__form" onSubmit={handleSubmit}>
-          <label>Full Name <input name="name" required onChange={(e) => setFormData({...formData, name: e.target.value})} /></label>
-          <label>Email <input type="email" required onChange={(e) => setFormData({...formData, email: e.target.value})} /></label>
+          <label>
+            Full Name{" "}
+            <input
+              name="name"
+              required
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+            />
+          </label>
+          <label>
+            Email{" "}
+            <input
+              type="email"
+              required
+              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+            />
+          </label>
           <label>
             Password
             <div style={{ position: "relative" }}>
@@ -44,7 +82,7 @@ export default function SignupIndividual() {
                 type={showPassword ? "text" : "password"}
                 required
                 value={formData.password}
-                onChange={(e) => setFormData({...formData, password: e.target.value})}
+                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                 onFocus={() => setPwFocused(true)}
                 onBlur={() => setPwFocused(false)}
                 style={{ width: "100%", paddingRight: "40px" }}
@@ -65,11 +103,17 @@ export default function SignupIndividual() {
           {(() => {
             const { checks } = computeChecks(formData.password, { username: formData.name, email: formData.email });
             const allPassed = Object.values(checks).every(Boolean);
-            return <button className="btn" type="submit" disabled={status.loading || !allPassed}>Create Account</button>;
+            return (
+              <button className="btn" type="submit" disabled={status.loading || !allPassed}>
+                Create Account
+              </button>
+            );
           })()}
         </form>
-        <footer style={{marginTop: "20px", textAlign: "center"}}>
-          <Link to="/signup" style={{color: "var(--accent)"}}>Back to selection</Link>
+        <footer style={{ marginTop: "20px", textAlign: "center" }}>
+          <Link to="/signup" style={{ color: "var(--accent)" }}>
+            Back to selection
+          </Link>
         </footer>
       </div>
     </div>
