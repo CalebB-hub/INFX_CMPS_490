@@ -90,10 +90,8 @@ WSGI_APPLICATION = 'backend.wsgi.application'
 if os.getenv('USE_SQLITE') == '1' or not os.getenv('DB_NAME'):
     DATABASES = {
     'default': dj_database_url.config(
-        # Replace this value with your local database's connection string.
-        default='postgresql://postgres:postgres@localhost:5432/mysite',
-        conn_max_age=600
-    )
+         default=os.environ.get('postgresql://infx_490_db_gjyt_user:T57TDbhRR1tC8aOfWXn6N6yOA4TNjniE@dpg-d6s6fcp5pdvs73fga3qg-a.ohio-postgres.render.com/infx_490_db_gjyt')
+     )
 }
 
 AUTH_USER_MODEL = 'api.User'
