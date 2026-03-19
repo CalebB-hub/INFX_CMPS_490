@@ -2,7 +2,7 @@ import React from "react";
 import { computeChecks } from "../utils/passwordUtils";
 
 export default function PasswordStrength({ password, username, email, showChecklist }) {
-  const { checks } = computeChecks(password, { username, email });
+  const { checks, containsPersonalInfo } = computeChecks(password, { username, email });
   
   // Calculate score
   const passedCount = Object.values(checks).filter(Boolean).length;
@@ -21,6 +21,12 @@ export default function PasswordStrength({ password, username, email, showCheckl
       <div style={{ height: "4px", background: "#eee", marginTop: "8px", borderRadius: "2px", overflow: "hidden" }}>
         <div style={{ width, background: color, height: "100%", transition: "all 0.3s ease" }} />
       </div>
+
+      {containsPersonalInfo && (
+        <p style={{ color: "var(--error, red)", fontSize: "0.82rem", marginTop: "6px", marginBottom: 0 }}>
+          ⚠ Password cannot contain your name or email.
+        </p>
+      )}
       
       {showChecklist && (
         <ul style={{ listStyle: "none", padding: 0, marginTop: "8px", fontSize: "0.85rem", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "4px" }}>
@@ -39,9 +45,7 @@ export default function PasswordStrength({ password, username, email, showCheckl
           <li style={{ color: checks.special ? "var(--success, green)" : "var(--muted, #888)" }}>
             {checks.special ? "✓" : "○"} Special char
           </li>
-          <li style={{ color: checks.unique ? "var(--success, green)" : "var(--muted, #888)" }}>
-            {checks.unique ? "✓" : "○"} Unique
-          </li>
+
         </ul>
       )}
     </div>

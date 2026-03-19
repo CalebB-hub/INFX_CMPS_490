@@ -69,8 +69,10 @@ def signup(request):
         )
 
     # Validate password (Django validators; password will be hashed on create)
+    # Pass a temp user so UserAttributeSimilarityValidator can compare against name/email
     try:
-        validate_password(password)
+        temp_user = User(username=email, email=email, first_name=first_name, last_name=last_name)
+        validate_password(password, temp_user)
     except DjangoValidationError as e:
         return Response(
             {'error': 'Invalid password.', 'details': list(e.messages)},
