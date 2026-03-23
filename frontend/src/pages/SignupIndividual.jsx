@@ -101,10 +101,10 @@ export default function SignupIndividual() {
             <PasswordStrength password={formData.password} username={formData.name} email={formData.email} showChecklist={pwFocused || !!formData.password} />
           </label>
           {(() => {
-            const { checks } = computeChecks(formData.password, { username: formData.name, email: formData.email });
+            const { checks, containsPersonalInfo } = computeChecks(formData.password, { username: formData.name, email: formData.email });
             const allPassed = Object.values(checks).every(Boolean);
             return (
-              <button className="btn" type="submit" disabled={status.loading || !allPassed}>
+              <button className="btn" type="submit" disabled={status.loading || !allPassed || containsPersonalInfo}>
                 Create Account
               </button>
             );
