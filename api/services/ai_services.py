@@ -1,13 +1,20 @@
 import json
-import google.generativeai as genai
+import os
+import google.genai as genai
 import pydantic
+from dotenv import load_dotenv
 from rest_framework.response import Response
 from rest_framework import status
-from django.conf import settings
+
+load_dotenv()
 
 def _generate_emails(subject):
-    api_key = "AIzaSyD5qsOBDPVP7xzpMq_GO2aQbxQSJepu1iU"
-    #api_key = getattr(settings, 'GEMINI_API_KEY', None)
+    try:
+        from django.conf import settings
+        api_key = getattr(settings, 'GEMINI_API_KEY', None)
+    except Exception:
+        api_key = None
+    api_key = api_key or os.environ.get('GEMINI_API_KEY')
 
     if not api_key:
         return Response(
@@ -15,8 +22,7 @@ def _generate_emails(subject):
             status=status.HTTP_503_SERVICE_UNAVAILABLE,
         )
 
-    genai.configure(api_key=api_key)
-    model=genai.GenerativeModel("gemini-2.0-flash")
+    client = genai.Client(api_key=api_key)
 
     prompt = f"""
     A user is about to take a test on how to spot phishing emails scams. We need the create 15 fake emails to use for this test with the following criteria:
@@ -25,30 +31,35 @@ def _generate_emails(subject):
     1) The sender's email address
     2) A subject line
     3) An email body
-    4) After the email include a field "IsPhishing", set to either "True" or "False"
-    5) A list of red flags in the email. If the email is a normal email (IsPhishing = False), this field will be empty.
+    4) After the email indicate whether the email is phishing or not with "True" or "False"
+    5) A list of red flags in the email. If the email is a normal email (Is Phishing = False), this field will be empty.
 
-    The test may be focused in on one type of phishing scam. If the bellow field, "Subject", is empty, feel free to include any type of phishing scam email.
+    The test may be focused in on one type of phishing scam.
     Subject: {subject}
 
-    When generating the emails, you should follow the following format, making sure to include the separation lines:
+    Return your response as a JSON array with no additional text or markdown. Each email should be an object with the following fields:
+    "sender", "subject", "body", "is_phishing" (boolean), "red_flags" (array of strings).
 
-    =================================================
-    Sender's Email: <sender's email address>
-    Subject: <subject line>
-
-    Body: <body>
-
-    IsPhishing: <True or False>
-    Red Flags: <red flags>
-    =================================================
-
-    You will generate 9 normal emails and 6 phishing emails following this format.
+    You will generate 9 normal emails and 6 phishing emails.
     """
 
-    response = model.generate_content(prompt)
-    raw_text = response.text
+    response = client.models.generate_content(
+        model="gemini-2.5-flash-lite",
+        contents=prompt,
+        config=genai.types.GenerateContentConfig(
+            response_mime_type="application/json"
+        )
+    )
+    return response.text
 
-    print(raw_text)
+"""
+Clean the repsonse from the AI and put it into a json
+"""
+def _clean_response(response):
+    return json.loads(response)
 
-_generate_emails("suspicious sender email address")
+if __name__ == "__main__":
+    result = _clean_response(_generate_emails("Urgency"))
+    with open("test_output.json", "w") as f:
+        json.dump(result, f, indent=2)
+    print("Saved to test_output.json")
