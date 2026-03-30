@@ -6,12 +6,14 @@ export function computeChecks(password, { username = '', email = '' } = {}) {
   const lower = /[a-z]/.test(password);
   const number = /[0-9]/.test(password);
   const special = /[^A-Za-z0-9]/.test(password);
-  // Unique: not equal to username or email, and not a common password
-  const unique =
-    password &&
-    password !== username &&
-    password !== email &&
-    !["password", "12345678", "qwerty", "letmein", "admin", "welcome"].includes(password.toLowerCase());
+
+  const lowerPwd = password.toLowerCase();
+  const emailPrefix = email ? email.split('@')[0].toLowerCase() : '';
+  const nameParts = [
+    ...username.toLowerCase().split(/[\s._-]+/),
+    ...emailPrefix.split(/[._-]+/),
+  ].filter(p => p.length >= 3);
+  const containsPersonalInfo = password.length > 0 && nameParts.some(part => lowerPwd.includes(part));
 
   return {
     checks: {
@@ -20,7 +22,7 @@ export function computeChecks(password, { username = '', email = '' } = {}) {
       lower,
       number,
       special,
-      unique,
     },
+    containsPersonalInfo,
   };
 }

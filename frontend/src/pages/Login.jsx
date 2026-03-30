@@ -1,8 +1,12 @@
 import { useMemo, useState } from "react";
-import { useLocation, useNavigate, Link } from "react-router-dom"; // Added Link
-import { mockLogin } from "../mock/mockApi";
+import { useLocation, useNavigate, Link } from "react-router-dom";
 import PhishFreeFullLogo from "../Logos/Phish Free Full Logo.png";
 import PasswordToggleIcon from "../components/PasswordToggleIcon";
+
+const API_BASE = "http://localhost:8000/api";
+const TOKEN_KEY = "pf_auth_token";
+const REFRESH_TOKEN_KEY = "pf_refresh_token";
+const USER_KEY = "pf_user";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -22,9 +26,43 @@ export default function Login() {
     setStatus({ loading: true, error: "" });
 
     try {
-      const { token, user } = await mockLogin(email.trim(), password);
-      localStorage.setItem("pf_auth_token", token);
-      localStorage.setItem("pf_user", JSON.stringify(user));
+      const loginResponse = await fetch(`${API_BASE}/auth/login/`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email: email.trim(),
+          password,
+        }),
+      });
+
+      const loginData = await loginResponse.json();
+
+      if (!loginResponse.ok) {
+        throw new Error(loginData.error || "Invalid credentials.");
+      }
+
+      localStorage.setItem(TOKEN_KEY, loginData.accessToken);
+      localStorage.setItem(REFRESH_TOKEN_KEY, loginData.refreshToken);
+
+      try {
+        const profileResponse = await fetch(`${API_BASE}/users/me`, {
+          headers: {
+            Authorization: `Bearer ${loginData.accessToken}`,
+          },
+        });
+
+        const profileData = await profileResponse.json();
+        if (profileResponse.ok) {
+          localStorage.setItem(USER_KEY, JSON.stringify(profileData));
+        } else {
+          localStorage.setItem(USER_KEY, JSON.stringify(loginData.user));
+        }
+      } catch {
+        localStorage.setItem(USER_KEY, JSON.stringify(loginData.user));
+      }
+
       navigate(redirectTo, { replace: true });
     } catch (err) {
       setStatus({ loading: false, error: err.message || "Invalid credentials." });
@@ -36,22 +74,24 @@ export default function Login() {
   return (
     <div className="auth">
       <div className="auth__card">
-        <header style={{ 
-          display: "flex", 
-          flexDirection: "column", 
-          alignItems: "center", 
-          textAlign: "center", 
-          marginBottom: "24px" 
-        }}>
-          <img 
-            src={PhishFreeFullLogo} 
-            alt="Phish Free Full Logo.png" 
-            style={{ 
-              width: "325px", 
-              height: "auto", 
+        <header
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            textAlign: "center",
+            marginBottom: "24px",
+          }}
+        >
+          <img
+            src={PhishFreeFullLogo}
+            alt="Phish Free Full Logo.png"
+            style={{
+              width: "325px",
+              height: "auto",
               marginBottom: "4px",
-              display: "block"
-            }} 
+              display: "block",
+            }}
           />
           <h1 style={{ fontWeight: "800", fontSize: "1.8rem", margin: "0" }}>
             Sign in
@@ -79,7 +119,9 @@ export default function Login() {
           <label>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <span>Password</span>
-              <Link to="/forgot-password" style={{ fontSize: "0.85rem", color: "var(--accent)" }}>Forgot password?</Link>
+              <Link to="/forgot-password" style={{ fontSize: "0.85rem", color: "var(--accent)" }}>
+                Forgot password?
+              </Link>
             </div>
             <div style={{ position: "relative" }}>
               <input
@@ -87,7 +129,7 @@ export default function Login() {
                 onChange={(e) => setPassword(e.target.value)}
                 type={showPassword ? "text" : "password"}
                 autoComplete="current-password"
-                placeholder="••••••••"
+                placeholder="........"
                 required
                 style={{ width: "100%", paddingRight: "40px" }}
               />
@@ -110,13 +152,11 @@ export default function Login() {
         </form>
 
         <footer style={{ marginTop: "32px", textAlign: "center", borderTop: "1px solid var(--border-strong)", paddingTop: "20px" }}>
-          {/* NEW: Link to Signup Role selection */}
           <p style={{ fontSize: "14px", marginBottom: "12px" }}>
-            Don't have an account? <Link to="/signup" style={{ color: "var(--accent)", fontWeight: "bold" }}>Sign up here</Link>
-          </p>
-          
-          <p className="muted" style={{ fontSize: "12px" }}>
-            Mock credentials: <b>student@example.com</b> / <b>phishfree123</b>
+            Don't have an account?{" "}
+            <Link to="/signup" style={{ color: "var(--accent)", fontWeight: "bold" }}>
+              Sign up here
+            </Link>
           </p>
         </footer>
       </div>

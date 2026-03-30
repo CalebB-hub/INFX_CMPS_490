@@ -1,15 +1,15 @@
 import { useState } from "react";
-import { useNavigate, useSearchParams, Link } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import PasswordStrength from "../components/PasswordStrength";
 import PasswordToggleIcon from "../components/PasswordToggleIcon";
 import { computeChecks } from "../utils/passwordUtils";
-import { mockResetPassword } from "../mock/mockApi";
+
+const API_BASE = "http://localhost:8000/api";
 
 export default function ResetPassword() {
-  const [searchParams] = useSearchParams();
-  const token = searchParams.get("token");
   const navigate = useNavigate();
 
+  const [currentPassword, setCurrentPassword] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [pwFocused, setPwFocused] = useState(false);
@@ -26,11 +26,28 @@ export default function ResetPassword() {
 
     setStatus({ loading: true, error: "", success: "" });
     try {
-      await mockResetPassword(token, password);
+      const token = localStorage.getItem("pf_auth_token");
+      const response = await fetch(`${API_BASE}/users/me/password`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          currentPassword,
+          newPassword: password,
+        }),
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.details?.join(" ") || data.error || "Unable to update password.");
+      }
+
       setStatus({ loading: false, success: "Password updated. Redirecting to login...", error: "" });
       setTimeout(() => navigate("/login"), 2000);
     } catch (err) {
-      setStatus({ loading: false, error: err.message || "Unable to reset password.", success: "" });
+      setStatus({ loading: false, error: err.message || "Unable to update password.", success: "" });
     }
   }
 
@@ -42,6 +59,16 @@ export default function ResetPassword() {
         {status.success && <div className="alert alert--success">{status.success}</div>}
 
         <form className="auth__form" onSubmit={handleSubmit}>
+          <label>
+            Current password
+            <input
+              type="password"
+              required
+              value={currentPassword}
+              onChange={(e) => setCurrentPassword(e.target.value)}
+            />
+          </label>
+
           <label>
             New password
             <div style={{ position: "relative" }}>
@@ -92,8 +119,6 @@ export default function ResetPassword() {
           </label>
 
           {(() => {
-            // Uniqueness: block username/email as password if available
-            // You may want to pass username/email from props or context
             const { checks } = computeChecks(password, {});
             const allPassed = Object.values(checks).every(Boolean);
             return (
