@@ -1,0 +1,22 @@
+databases:
+  - name: INFX_490_DB
+    plan: free
+    databaseName: infx_490_db_gjyt
+    user: infx_490_db_gjyt_user
+
+services:
+  - type: web
+    plan: free
+    name: mysite
+    runtime: python
+    buildCommand: './build.sh'
+    startCommand: 'python -m gunicorn INFX_CMPS_490.asgi:application -k uvicorn.workers.UvicornWorker'
+    envVars:
+      - key: postgresql://infx_490_db_gjyt_user:T57TDbhRR1tC8aOfWXn6N6yOA4TNjniE@dpg-d6s6fcp5pdvs73fga3qg-a/infx_490_db_gjyt
+        fromDatabase:
+          name: INFX_490_DB
+          property: connectionString
+      - key: SECRET_KEY
+        generateValue: true
+      - key: WEB_CONCURRENCY
+        value: 4
