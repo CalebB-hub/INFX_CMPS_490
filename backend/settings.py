@@ -84,12 +84,21 @@ WSGI_APPLICATION = 'backend.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
-# Set USE_SQLITE=1 in .env to use SQLite (no PostgreSQL needed). Remove it to use PostgreSQL.
-if os.getenv('USE_SQLITE') == '1' or not os.getenv('DB_NAME'):
+# Database config:
+# - Prefer DATABASE_URL when set (e.g. Render/Heroku style).
+# - Otherwise fall back to SQLite for local dev/tests when USE_SQLITE=1 (or when no DB_* provided).
+database_url = os.getenv('DATABASE_URL')
+
+if database_url:
     DATABASES = {
-        'default': dj_database_url.config(
-         default=os.environ.get('postgresql://infx_490_db_gjyt_user:T57TDbhRR1tC8aOfWXn6N6yOA4TNjniE@dpg-d6s6fcp5pdvs73fga3qg-a.ohio-postgres.render.com/infx_490_db_gjyt')
-     )
+        'default': dj_database_url.parse(database_url, conn_max_age=600),
+    }
+elif os.getenv('USE_SQLITE') == '1' or not os.getenv('DB_NAME'):
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
     }
 else:
     DATABASES = {
@@ -99,7 +108,7 @@ else:
             'USER': os.getenv('DB_USER'),
             'PASSWORD': os.getenv('DB_PASSWORD'),
             'HOST': os.getenv('DB_HOST', 'localhost'),
-            'PORT': os.getenv('DB_PORT', '5432')
+            'PORT': os.getenv('DB_PORT', '5432'),
         }
     }
 
