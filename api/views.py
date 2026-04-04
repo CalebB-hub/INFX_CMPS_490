@@ -14,7 +14,8 @@ import google.generativeai as genai
 import json
 from datetime import datetime, timezone as dt_timezone
 
-from .models import Role, Assignment, Test, Lesson, Module, Question
+from .models import Role, Assignment, Test, Lesson, Module
+from .services.ai_services import _generate_emails, _clean_response
 
 User = get_user_model()
 
@@ -562,35 +563,26 @@ def learning_modules(request):
 
 
 @api_view(['POST'])
-@permission_classes([AllowAny])
-def generate_content(request):
+@permission_classes([IsAuthenticated])
+def generate_test_emails(request):
     """
     Send a prompt to Gemini and return generated text.
     Body: { "prompt": string }
     """
-    api_key = getattr(settings, 'GEMINI_API_KEY', None)
-    if not api_key:
-        return Response(
-            {'error': 'GEMINI_API_KEY is not configured.'},
-            status=status.HTTP_503_SERVICE_UNAVAILABLE,
-        )
+    subject = request.data.get('subject')
 
-    body = request.data if getattr(request, 'data', None) else {}
-    prompt = body.get('prompt')
-    if not prompt or not str(prompt).strip():
+    if not subject or not str(subject).strip():
         return Response(
-            {'error': 'prompt is required.'},
+            {'error': 'subject is required'},
             status=status.HTTP_400_BAD_REQUEST,
         )
-
+    
     try:
-        genai.configure(api_key=api_key)
-        model = genai.GenerativeModel('gemini-2.0-flash')
-        response = model.generate_content(str(prompt).strip())
-        return Response({'text': response.text}, status=status.HTTP_200_OK)
+        emails = _clean_response(_generate_emails(str(subject).strip()))
+        return Response({'emails': emails}, status=status.HTTP_200_OK)
     except Exception as e:
         return Response(
-            {'error': f'Gemini API error: {str(e)}'},
+            {'error': f'Failed to generate emails: {str(e)}'},
             status=status.HTTP_502_BAD_GATEWAY,
         )
 
