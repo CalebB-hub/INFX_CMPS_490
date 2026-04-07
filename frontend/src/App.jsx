@@ -19,6 +19,7 @@ import ProtectedRoute from "./routes/ProtectedRoute";
 import LessonDetails from "./pages/LessonDetails";
 import Lessons from "./pages/Lessons";
 import ProfileRouter from "./pages/ProfileRouter";
+import Test from "./pages/Test";
 
 
 export default function App() {
@@ -40,6 +41,7 @@ export default function App() {
       <Route path="/learning/lessons" element={<ProtectedRoute><Lessons /></ProtectedRoute>} />
       <Route path="/learning/quizzes" element={<ProtectedRoute><Quizzes /></ProtectedRoute>} />
       <Route path="/learning/quizzes/:quizId" element={<ProtectedRoute><QuizDetails /></ProtectedRoute>} />
+      <Route path="/test" element={<ProtectedRoute><Test /></ProtectedRoute>} />
       <Route path="/grades" element={<ProtectedRoute><Grades /></ProtectedRoute>} />
       <Route path="/about" element={<ProtectedRoute><About /></ProtectedRoute>} />
       <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
