@@ -6,6 +6,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import get_user_model, authenticate
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError as DjangoValidationError
+from django.shortcuts import get_object_or_404
 from django.conf import settings
 from django.db.models import Avg, Count, Q
 from django.utils import timezone
@@ -557,6 +558,67 @@ def learning_modules(request):
             'modules': modules_list,
             'totalModules': len(modules_list),
             'scope': scope,
+        },
+        status=status.HTTP_200_OK,
+    )
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def learning_lessons(request):
+    """
+    Returns lessons for the current user.
+    
+    Query Parameters:
+    - moduleId: Optional module filter
+    """
+    module_id = request.query_params.get('moduleId')
+    lessons_query = Lesson.objects.filter(user_id=request.user).select_related('module')
+
+    if module_id:
+        lessons_query = lessons_query.filter(module__module_id=module_id)
+
+    lessons_query = lessons_query.order_by('lesson_id')
+    lessons_list = []
+
+    for lesson in lessons_query:
+        lessons_list.append({
+            'lessonId': lesson.lesson_id,
+            'moduleId': lesson.module.module_id if lesson.module else None,
+            'moduleTitle': lesson.module.title if lesson.module else None,
+            'title': lesson.title,
+            'lessonMaterial': lesson.lesson_material,
+            'score': float(lesson.score) if lesson.score is not None else None,
+            'completedAt': lesson.completed_at.isoformat() if lesson.completed_at else None,
+        })
+
+    return Response(
+        {
+            'lessons': lessons_list,
+            'totalLessons': len(lessons_list),
+        },
+        status=status.HTTP_200_OK,
+    )
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def learning_lesson_detail(request, lesson_id):
+    """
+    Returns a single lesson for the current user.
+    """
+    lesson = get_object_or_404(Lesson, lesson_id=lesson_id, user_id=request.user)
+
+    return Response(
+        {
+            'lessonId': lesson.lesson_id,
+            'moduleId': lesson.module.module_id if lesson.module else None,
+            'moduleTitle': lesson.module.title if lesson.module else None,
+            'title': lesson.title,
+            'lessonMaterial': lesson.lesson_material,
+            'questions': lesson.questions,
+            'score': float(lesson.score) if lesson.score is not None else None,
+            'completedAt': lesson.completed_at.isoformat() if lesson.completed_at else None,
         },
         status=status.HTTP_200_OK,
     )

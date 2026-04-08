@@ -1,19 +1,40 @@
 import { Link } from "react-router-dom";
 import { useEffect, useState } from "react";
 import TopNav from "../components/TopNav";
+import { getAccessToken, refreshAccessToken } from "../services/authService";
 
 const API_BASES = ["http://localhost:8000/api", "/api"];
 
-async function fetchModules(token) {
+async function fetchWithAuth(url) {
+  const token = getAccessToken();
+  if (!token) {
+    throw new Error("You are not logged in.");
+  }
+
+  const response = await fetch(url, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (response.status !== 401) {
+    return response;
+  }
+
+  const refreshedToken = await refreshAccessToken();
+  return fetch(url, {
+    headers: {
+      Authorization: `Bearer ${refreshedToken}`,
+    },
+  });
+}
+
+async function fetchModules() {
   let lastError = null;
 
   for (const base of API_BASES) {
     try {
-      const response = await fetch(`${base}/learning/modules?scope=me`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      const response = await fetchWithAuth(`${base}/learning/modules?scope=me`);
 
       const raw = await response.text();
       const data = raw ? JSON.parse(raw) : {};
@@ -41,13 +62,7 @@ export default function Learning() {
 
     async function loadModules() {
       try {
-        const token = localStorage.getItem("pf_auth_token");
-
-        if (!token) {
-          throw new Error("You are not logged in.");
-        }
-
-        const loadedModules = await fetchModules(token);
+        const loadedModules = await fetchModules();
 
         if (!mounted) return;
         setModules(loadedModules);
@@ -102,9 +117,14 @@ export default function Learning() {
                     </div>
                   </div>
 
-                  <Link className="btn" to="/profile">
-                    View progress
-                  </Link>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <Link className="btn" to="/learning/lessons">
+                      View lessons
+                    </Link>
+                    <Link className="btn" to="/profile">
+                      View progress
+                    </Link>
+                  </div>
                 </div>
               </div>
             ))}

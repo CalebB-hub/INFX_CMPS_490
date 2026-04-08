@@ -1,7 +1,56 @@
 import { useEffect, useMemo, useState } from "react"
 import { Link, useParams } from "react-router-dom"
 import TopNav from "../components/TopNav"
-import { mockGetLessonById } from "../mock/mockApi"
+import { getAccessToken, refreshAccessToken } from "../services/authService"
+
+const API_BASES = ["http://localhost:8000/api", "/api"]
+
+async function fetchWithAuth(url) {
+  const token = getAccessToken()
+  if (!token) {
+    throw new Error("You are not logged in.")
+  }
+
+  const response = await fetch(url, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  })
+
+  if (response.status !== 401) {
+    return response
+  }
+
+  const refreshedToken = await refreshAccessToken()
+  return fetch(url, {
+    headers: {
+      Authorization: `Bearer ${refreshedToken}`,
+    },
+  })
+}
+
+async function fetchLesson(lessonId) {
+  let lastError = null
+
+  for (const base of API_BASES) {
+    try {
+      const response = await fetchWithAuth(`${base}/learning/lessons/${lessonId}`)
+
+      const raw = await response.text()
+      const data = raw ? JSON.parse(raw) : {}
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to load lesson")
+      }
+
+      return data
+    } catch (error) {
+      lastError = error
+    }
+  }
+
+  throw lastError || new Error("Failed to load lesson")
+}
 
 export default function LessonDetails() {
   const { lessonId } = useParams()
@@ -13,7 +62,7 @@ export default function LessonDetails() {
     let mounted = true
     setLoading(true)
     setError("")
-    mockGetLessonById(lessonId)
+    fetchLesson(lessonId)
       .then((data) => {
         if (!mounted) return
         setLesson(data)
@@ -25,16 +74,13 @@ export default function LessonDetails() {
     }
   }, [lessonId])
 
-  const quizGrade = useMemo(() => {
-    if (!lesson?.quizId) return null
-    try {
-      const raw = localStorage.getItem("quizGrades")
-      const parsed = raw ? JSON.parse(raw) : {}
-      return parsed[lesson.quizId] || null
-    } catch (e) {
-      return null
-    }
-  }, [lesson?.quizId])
+  const paragraphs = useMemo(() => {
+    if (!lesson?.lessonMaterial) return []
+    return lesson.lessonMaterial
+      .split(/\n\s*\n/)
+      .map((line) => line.trim())
+      .filter(Boolean)
+  }, [lesson?.lessonMaterial])
 
   return (
     <div>
@@ -54,29 +100,20 @@ export default function LessonDetails() {
             <h2 style={{ marginTop: 0 }}>{lesson.title}</h2>
 
             <div className="muted" style={{ marginBottom: 12 }}>
-              Lesson ID: {lesson.id}
+              Lesson ID: {lesson.lessonId}
             </div>
 
             <div style={{ display: "grid", gap: 8 }}>
-              {lesson.body?.map((p, idx) => (
+              {paragraphs.map((p, idx) => (
                 <p key={idx} style={{ margin: 0 }}>
                   {p}
                 </p>
               ))}
             </div>
 
-            <div style={{ marginTop: 16, display: "flex", gap: 10 }}>
-              {lesson.quizId ? (
-                <Link className="btn" to={`/learning/quizzes/${lesson.quizId}`}>
-                  {quizGrade ? "Review quiz →" : "Start quiz →"}
-                </Link>
-              ) : (
-                <span className="muted">Quiz coming soon</span>
-              )}
-            </div>
-            {quizGrade && (
-              <div className="muted" style={{ marginTop: 10 }}>
-                Quiz score: {quizGrade.score}/{quizGrade.total} · {quizGrade.percent}%
+            {lesson.score !== null && lesson.score !== undefined && (
+              <div className="muted" style={{ marginTop: 12 }}>
+                Score: {lesson.score}
               </div>
             )}
           </div>
