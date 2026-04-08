@@ -12,8 +12,11 @@ from django.db.models import Avg, Count, Q
 from django.utils import timezone
 
 import google.generativeai as genai
+import json
+from datetime import datetime, timezone as dt_timezone
 
 from .models import Role, Assignment, Test, Lesson, Module
+from .services.ai_services import _generate_emails, _clean_response
 
 User = get_user_model()
 
@@ -622,34 +625,186 @@ def learning_lesson_detail(request, lesson_id):
 
 
 @api_view(['POST'])
-@permission_classes([AllowAny])
-def generate_content(request):
+@permission_classes([IsAuthenticated])
+def generate_test_emails(request):
     """
     Send a prompt to Gemini and return generated text.
     Body: { "prompt": string }
     """
-    api_key = getattr(settings, 'GEMINI_API_KEY', None)
-    if not api_key:
-        return Response(
-            {'error': 'GEMINI_API_KEY is not configured.'},
-            status=status.HTTP_503_SERVICE_UNAVAILABLE,
-        )
+    subject = request.data.get('subject')
 
-    body = request.data if getattr(request, 'data', None) else {}
-    prompt = body.get('prompt')
-    if not prompt or not str(prompt).strip():
+    if not subject or not str(subject).strip():
         return Response(
-            {'error': 'prompt is required.'},
+            {'error': 'subject is required'},
             status=status.HTTP_400_BAD_REQUEST,
         )
-
+    
     try:
-        genai.configure(api_key=api_key)
-        model = genai.GenerativeModel('gemini-2.0-flash')
-        response = model.generate_content(str(prompt).strip())
-        return Response({'text': response.text}, status=status.HTTP_200_OK)
+        emails = _clean_response(_generate_emails(str(subject).strip()))
+        return Response({'emails': emails}, status=status.HTTP_200_OK)
     except Exception as e:
         return Response(
-            {'error': f'Gemini API error: {str(e)}'},
+            {'error': f'Failed to generate emails: {str(e)}'},
             status=status.HTTP_502_BAD_GATEWAY,
         )
+
+
+def _safe_json_loads(value):
+    if value is None:
+        return None
+    if isinstance(value, (dict, list)):
+        return value
+    try:
+        return json.loads(value)
+    except Exception:
+        return None
+
+
+@api_view(['GET', 'POST'])
+@permission_classes([IsAuthenticated])
+def quizzes(request):
+    """
+    GET: return all quiz templates.
+    POST: create a quiz template.
+    """
+    if request.method == 'GET':
+        quizzes = (
+            Test.objects.filter(user_id__isnull=True)
+            .order_by('test_id')
+        )
+
+        payload = []
+        for quiz in quizzes:
+            meta = _safe_json_loads(quiz.description) or {}
+            lesson_id = meta.get('lessonId') if isinstance(meta, dict) else None
+
+            questions = Question.objects.filter(test_id=quiz).order_by('question_id')
+            question_payload = []
+            for q in questions:
+                options = _safe_json_loads(q.response)
+                question_payload.append(
+                    {
+                        'id': str(q.question_id),
+                        'prompt': q.question_text,
+                        'options': options if isinstance(options, list) else [],
+                        'correctIndex': int(q.answer) if str(q.answer).isdigit() else None,
+                    }
+                )
+
+            payload.append(
+                {
+                    'id': str(quiz.test_id),
+                    'lessonId': lesson_id,
+                    'title': quiz.title,
+                    'questions': question_payload,
+                }
+            )
+
+        return Response(payload, status=status.HTTP_200_OK)
+
+    # POST
+    body = request.data if getattr(request, 'data', None) else {}
+    if not isinstance(body, dict):
+        return Response({'error': 'Request body must be JSON object.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    title = str(body.get('title', '')).strip()
+    lesson_id = body.get('lessonId', None)
+    questions = body.get('questions', [])
+
+    if not title:
+        return Response({'error': 'title is required.'}, status=status.HTTP_400_BAD_REQUEST)
+    if not isinstance(questions, list) or len(questions) == 0:
+        return Response({'error': 'questions must be a non-empty array.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    meta = {'lessonId': lesson_id} if lesson_id is not None else {}
+    quiz = Test.objects.create(
+        title=title,
+        description=json.dumps(meta),
+        score=0,
+        date_taken=datetime.now(dt_timezone.utc),
+        user_id=None,
+    )
+
+    created_questions = []
+    for idx, q in enumerate(questions):
+        if not isinstance(q, dict):
+            return Response({'error': f'questions[{idx}] must be an object.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        prompt = str(q.get('prompt', '')).strip()
+        options = q.get('options', [])
+        correct_index = q.get('correctIndex', None)
+
+        if not prompt:
+            return Response({'error': f'questions[{idx}].prompt is required.'}, status=status.HTTP_400_BAD_REQUEST)
+        if not isinstance(options, list) or len(options) < 2:
+            return Response({'error': f'questions[{idx}].options must be an array with >= 2 items.'}, status=status.HTTP_400_BAD_REQUEST)
+        if not isinstance(correct_index, int) or correct_index < 0 or correct_index >= len(options):
+            return Response({'error': f'questions[{idx}].correctIndex must be a valid index into options.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        created = Question.objects.create(
+            test_id=quiz,
+            question_text=prompt,
+            question_type='multiple_choice',
+            answer=str(correct_index),
+            response=json.dumps([str(o) for o in options]),
+            score=1,
+        )
+        created_questions.append(str(created.question_id))
+
+    return Response(
+        {
+            'id': str(quiz.test_id),
+            'lessonId': lesson_id,
+            'title': quiz.title,
+            'questionIds': created_questions,
+        },
+        status=status.HTTP_201_CREATED,
+    )
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def test_post(request):
+    """
+    Create a Test attempt record for the authenticated user.
+
+    Body:
+    {
+      "title": string,
+      "description": string (optional),
+      "score": number (optional, default 0)
+    }
+    """
+    body = request.data if getattr(request, 'data', None) else {}
+    if not isinstance(body, dict):
+        return Response({'error': 'Request body must be JSON object.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    title = str(body.get('title', '')).strip()
+    description = str(body.get('description', '')).strip()
+    score = body.get('score', 0)
+
+    if not title:
+        return Response({'error': 'title is required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        score_value = float(score)
+    except Exception:
+        return Response({'error': 'score must be a number.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    t = Test.objects.create(
+        title=title,
+        description=description,
+        score=score_value,
+        date_taken=datetime.now(dt_timezone.utc),
+        user_id=request.user,
+    )
+
+    return Response(
+        {
+            'testId': str(t.test_id),
+            'title': t.title,
+            'score': float(t.score),
+            'dateTaken': t.date_taken.isoformat(),
+        },
+        status=status.HTTP_201_CREATED,
+    )

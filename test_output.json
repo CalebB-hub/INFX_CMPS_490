@@ -1,0 +1,147 @@
+[
+  {
+    "sender": "support@google.com",
+    "subject": "Your Google Account Security Alert",
+    "body": "Dear User,\n\nWe detected unusual activity on your Google Account. To protect your account, we have temporarily suspended access. Please verify your identity by clicking the link below to secure your account.\n\n[Link to Verify Account]\n\nIf you do not verify your account within 24 hours, your account may be permanently deleted.\n\nSincerely,\nThe Google Security Team",
+    "is_phishing": true,
+    "red_flags": [
+      "Generic greeting ('Dear User')",
+      "Sense of urgency/threat (account suspended, permanently deleted)",
+      "Suspicious link (not a direct Google domain, likely fake)",
+      "Request for immediate action to avoid negative consequences"
+    ]
+  },
+  {
+    "sender": "noreply@paypal.com",
+    "subject": "Urgent: Action Required for Your PayPal Account",
+    "body": "Dear PayPal User,\n\nWe have received a report of unauthorized activity on your PayPal account. For your security, we have temporarily limited access to your account. Please log in immediately to review your recent activity and confirm your identity.\n\n[Link to Login]\n\nFailure to do so may result in the permanent closure of your account.\n\nThank you for your cooperation.\n\nPayPal Support",
+    "is_phishing": true,
+    "red_flags": [
+      "Urgency and threat of account closure",
+      "Generic greeting",
+      "Suspicious link prompting login",
+      "Request for immediate action"
+    ]
+  },
+  {
+    "sender": "billing@yourcompany.com",
+    "subject": "Invoice #INV12345 Attached",
+    "body": "Dear Valued Customer,\n\nPlease find attached Invoice #INV12345 for your recent purchase. Payment is due within 30 days.\n\nThank you for your business.\n\nSincerely,\nYour Company Billing Department",
+    "is_phishing": false,
+    "red_flags": []
+  },
+  {
+    "sender": "info@techsupport.net",
+    "subject": "Your Computer Needs Immediate Attention!",
+    "body": "Your computer has been infected with a severe virus. To prevent data loss, you must download our system repair tool immediately. Click here to download: [Malicious Download Link]\n\nIf you do not act within the next hour, your personal files will be corrupted.",
+    "is_phishing": true,
+    "red_flags": [
+      "Alarmist tone and urgency",
+      "Threat of severe consequences (data loss, file corruption)",
+      "Direct request to download software from an unknown source",
+      "Unsolicited tech support claim"
+    ]
+  },
+  {
+    "sender": "notifications@facebookmail.com",
+    "subject": "New Login Alert for Your Facebook Account",
+    "body": "Hi John,\n\nA new device logged into your Facebook account today from an unknown location. If this wasn't you, please review your recent activity immediately and secure your account.\n\nReview Activity: [Link to Fake Login Page]\n\nWe recommend changing your password if you do not recognize this activity.\n\nThanks,\nFacebook Security Team",
+    "is_phishing": true,
+    "red_flags": [
+      "Urgency related to account security",
+      "Suspicious link that mimics Facebook's domain",
+      "Request to review activity and change password"
+    ]
+  },
+  {
+    "sender": "newsletter@exampleblog.com",
+    "subject": "Weekly Digest: Latest Tech Trends",
+    "body": "Hello,\n\nHere's your weekly digest of the latest in tech! This week, we cover AI advancements, new smartphone releases, and cybersecurity tips.\n\nRead More: [Link to Blog Post]\n\nStay informed!\n\nThe Example Blog Team",
+    "is_phishing": false,
+    "red_flags": []
+  },
+  {
+    "sender": "hr@corporatecareers.com",
+    "subject": "Job Offer: Senior Developer Position",
+    "body": "Dear Candidate,\n\nWe are pleased to offer you the position of Senior Developer at Corporate Careers. Please review the attached offer letter and reply with your acceptance within 48 hours.\n\nOffer Letter: [Attached Document]\n\nWe look forward to hearing from you.\n\nBest regards,\nHuman Resources Department",
+    "is_phishing": false,
+    "red_flags": []
+  },
+  {
+    "sender": "shipping@amazon.com",
+    "subject": "Your Amazon Order #987-6543210 Has Shipped",
+    "body": "Great news! Your Amazon order #987-6543210 is on its way. You can track its progress here: [Link to Amazon Tracking]\n\nEstimated delivery: [Date]\n\nThank you for shopping with Amazon.",
+    "is_phishing": false,
+    "red_flags": []
+  },
+  {
+    "sender": "support@microsoft.com",
+    "subject": "Urgent Security Update Required for Your Windows PC",
+    "body": "Dear Valued Customer,\n\nOur system has detected a critical security vulnerability on your Windows PC. To prevent potential data breaches, you must install the latest security patch immediately. Click the link below to download the update:\n\n[Link to Malicious Update]\n\nFailure to update within 12 hours will result in your system being locked.\n\nMicrosoft Support",
+    "is_phishing": true,
+    "red_flags": [
+      "Urgency and threat of system lockout",
+      "Request to download software from an untrusted source",
+      "Generic greeting from Microsoft",
+      "Unsolicited security alert"
+    ]
+  },
+  {
+    "sender": "info@yourbank.com",
+    "subject": "Important Update Regarding Your Bank Account",
+    "body": "Dear Customer,\n\nWe are writing to inform you about a necessary update to our security protocols. To ensure uninterrupted service, please verify your account details by clicking the link below and logging in:\n\n[Link to Fake Bank Login]\n\nThis action is required within 24 hours to avoid any disruption to your account.\n\nSincerely,\nYour Bank Security Team",
+    "is_phishing": true,
+    "red_flags": [
+      "Urgency and threat of account disruption",
+      "Request to verify personal information via a suspicious link",
+      "Generic greeting",
+      "Impersonation of a bank"
+    ]
+  },
+  {
+    "sender": "service@utilitycompany.com",
+    "subject": "Your Monthly Utility Bill",
+    "body": "Dear Customer,\n\nPlease find your monthly utility bill attached. Payment can be made online or by mail.\n\nBill: [Attached PDF]\n\nThank you for your prompt payment.\n\nSincerely,\nUtility Company",
+    "is_phishing": false,
+    "red_flags": []
+  },
+  {
+    "sender": "support@apple-support.com",
+    "subject": "Your Apple ID Requires Immediate Verification",
+    "body": "Dear Apple User,\n\nThere has been suspicious activity associated with your Apple ID. For your security, we've temporarily disabled access to your account. Please click the link below to verify your identity and restore access:\n\n[Link to Fake Apple Verification]\n\nIf verification is not completed within 1 hour, your account may be permanently suspended.\n\nRegards,\nApple Support Team",
+    "is_phishing": true,
+    "red_flags": [
+      "Extreme urgency ('immediate', '1 hour')",
+      "Threat of permanent suspension",
+      "Generic greeting",
+      "Suspicious link",
+      "Impersonation of Apple"
+    ]
+  },
+  {
+    "sender": "noreply@linkedin.com",
+    "subject": "New Connection Request",
+    "body": "Hi Jane,\n\nJohn Doe has sent you a connection request on LinkedIn.\n\nView Profile: [Link to LinkedIn Profile]\n\nBest regards,\nThe LinkedIn Team",
+    "is_phishing": false,
+    "red_flags": []
+  },
+  {
+    "sender": "info@travelagency.com",
+    "subject": "Your Upcoming Trip Confirmation - Flight #XYZ789",
+    "body": "Dear Traveler,\n\nYour flight booking for Flight #XYZ789 is confirmed. Please find your itinerary attached.\n\nItinerary: [Attached Document]\n\nWe wish you a pleasant journey.\n\nSincerely,\nTravel Agency",
+    "is_phishing": false,
+    "red_flags": []
+  },
+  {
+    "sender": "rewards@loyaltyprogram.com",
+    "subject": "Urgent: Your Loyalty Points Expire Tonight!",
+    "body": "Dear Member,\n\nYour accumulated loyalty points are about to expire at midnight! To avoid losing them, please claim your reward by clicking the link below and entering your details:\n\n[Link to Claim Reward]\n\nDon't miss out on your valuable rewards!\n\nThank you,\nLoyalty Program Team",
+    "is_phishing": true,
+    "red_flags": [
+      "False sense of urgency ('expire tonight', 'Don't miss out')",
+      "Request for personal information to claim reward",
+      "Suspicious link",
+      "Generic greeting"
+    ]
+  }
+]

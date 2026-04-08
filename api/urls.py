@@ -16,4 +16,7 @@ urlpatterns = [
     path('learning/lessons', views.learning_lessons, name='learning_lessons'),
     path('learning/lessons/<int:lesson_id>', views.learning_lesson_detail, name='learning_lesson_detail'),
     path('generate-content/', views.generate_content, name='generate_content'),
+    ##path('generate-content/', views.generate_content, name='generate_content'),
+    path('quizzes/', views.quizzes, name='quizzes'),
+    path('test/', views.test_post, name='test_post'),
 ]
