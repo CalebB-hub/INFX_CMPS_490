@@ -1,28 +1,77 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import TopNav from "../components/TopNav"
 
 const INBOX_STORAGE_KEY = "pf_inbox_messages"
+const API_BASES = ["http://localhost:8000/api", "/api"]
 
-const SAMPLE_EMAIL = {
-  subject: "Action Required: Update Your Payroll Details",
-  from: "HR Support <hr-support@payroll-alerts.com>",
-  body: [
-    "Hello,",
-    "",
-    "We detected an issue with your payroll profile. To avoid payment delays, please verify your account information within the next 2 hours.",
-    "",
-    "Click the secure link below to confirm your details:",
-    "http://payroll-verify.example.com/update",
-    "",
-    "Thank you,",
-    "HR Support Team",
-  ],
+async function fetchGeneratedEmails(token, subject) {
+  let lastError = null
+
+  for (const base of API_BASES) {
+    try {
+      const response = await fetch(`${base}/generate-test-emails/`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ subject }),
+      })
+
+      const raw = await response.text()
+      const data = raw ? JSON.parse(raw) : {}
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to generate test emails")
+      }
+
+      return Array.isArray(data.emails) ? data.emails : []
+    } catch (error) {
+      lastError = error
+    }
+  }
+
+  throw lastError || new Error("Failed to generate test emails")
 }
 
 export default function Test() {
+  const [topic, setTopic] = useState("Urgency")
+  const [email, setEmail] = useState(null)
+  const [loadingEmail, setLoadingEmail] = useState(true)
   const [response, setResponse] = useState("")
   const [submitted, setSubmitted] = useState(false)
   const [statusMessage, setStatusMessage] = useState("")
+
+  async function generateEmail(selectedTopic = topic) {
+    try {
+      setLoadingEmail(true)
+      setStatusMessage("")
+
+      const token = localStorage.getItem("pf_auth_token")
+      if (!token) {
+        throw new Error("You are not logged in.")
+      }
+
+      const emails = await fetchGeneratedEmails(token, selectedTopic)
+      if (!emails.length) {
+        throw new Error("No emails were generated.")
+      }
+
+      // Pick one generated email for the current test prompt.
+      setEmail(emails[Math.floor(Math.random() * emails.length)])
+      setSubmitted(false)
+      setResponse("")
+    } catch (error) {
+      setEmail(null)
+      setStatusMessage(error.message || "Failed to load test email.")
+    } finally {
+      setLoadingEmail(false)
+    }
+  }
+
+  useEffect(() => {
+    generateEmail("Urgency")
+  }, [])
 
   function saveInboxMessage() {
     const message = {
@@ -46,6 +95,10 @@ export default function Test() {
 
   function handleSubmit(e) {
     e.preventDefault()
+    if (!email) {
+      setStatusMessage("Generate a test email before submitting.")
+      return
+    }
     if (!response.trim()) {
       setStatusMessage("Please describe the mistakes you see in the email.")
       return
@@ -66,13 +119,46 @@ export default function Test() {
         </p>
 
         <div className="card" style={{ marginTop: 16 }}>
-          <div style={{ fontWeight: 600, marginBottom: 8 }}>
-            Subject: {SAMPLE_EMAIL.subject}
+          <label style={{ display: "block", fontWeight: 600, marginBottom: 8 }}>
+            Topic focus
+          </label>
+          <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+            <input
+              type="text"
+              value={topic}
+              onChange={(e) => setTopic(e.target.value)}
+              placeholder="e.g., Payroll, Urgency, Vendor Invoice"
+              style={{ flex: 1, padding: 10 }}
+            />
+            <button
+              className="btn"
+              type="button"
+              onClick={() => generateEmail(topic.trim() || "Urgency")}
+              disabled={loadingEmail}
+            >
+              {loadingEmail ? "Generating..." : "Generate email"}
+            </button>
           </div>
-          <div className="muted" style={{ marginBottom: 12 }}>
-            From: {SAMPLE_EMAIL.from}
-          </div>
-          <div style={{ whiteSpace: "pre-line" }}>{SAMPLE_EMAIL.body.join("\n")}</div>
+        </div>
+
+        <div className="card" style={{ marginTop: 16 }}>
+          {loadingEmail && <div className="muted">Generating test email...</div>}
+          {!loadingEmail && !email && (
+            <div className="muted">No email loaded. Generate a new test email.</div>
+          )}
+          {!loadingEmail && email && (
+            <>
+              <div style={{ fontWeight: 600, marginBottom: 8 }}>
+                Subject: {email.subject}
+              </div>
+              <div className="muted" style={{ marginBottom: 12 }}>
+                From: {email.sender || "Unknown sender"}
+              </div>
+              <div style={{ whiteSpace: "pre-line" }}>
+                {Array.isArray(email.body) ? email.body.join("\n") : String(email.body || "")}
+              </div>
+            </>
+          )}
         </div>
 
         <form onSubmit={handleSubmit} className="card" style={{ marginTop: 16 }}>
