@@ -2,12 +2,64 @@ import { useEffect, useMemo, useState } from "react"
 import { Link } from "react-router-dom"
 import TopNav from "../components/TopNav"
 import { mockGetLessons, mockGetQuizzes } from "../mock/mockApi"
+import { getAccessToken, refreshAccessToken } from "../services/authService"
+
+const API_BASES = ["http://localhost:8000/api", "/api"]
+
+async function fetchWithAuth(url) {
+  const token = getAccessToken()
+  if (!token) {
+    throw new Error("You are not logged in.")
+  }
+
+  const response = await fetch(url, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  })
+
+  if (response.status !== 401) {
+    return response
+  }
+
+  const refreshedToken = await refreshAccessToken()
+  return fetch(url, {
+    headers: {
+      Authorization: `Bearer ${refreshedToken}`,
+    },
+  })
+}
+
+async function fetchTestScores() {
+  let lastError = null
+
+  for (const base of API_BASES) {
+    try {
+      const response = await fetchWithAuth(`${base}/dashboard/me`)
+      const raw = await response.text()
+      const data = raw ? JSON.parse(raw) : {}
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to load test scores")
+      }
+
+      return data.tests?.recentTests || []
+    } catch (error) {
+      lastError = error
+    }
+  }
+
+  throw lastError || new Error("Failed to load test scores")
+}
 
 export default function Grades() {
   const [lessons, setLessons] = useState([])
   const [quizzes, setQuizzes] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
+  const [testScores, setTestScores] = useState([])
+  const [testScoresLoading, setTestScoresLoading] = useState(true)
+  const [testScoresError, setTestScoresError] = useState("")
 
   useEffect(() => {
     let mounted = true
@@ -21,6 +73,29 @@ export default function Grades() {
       })
       .catch((e) => setError(e.message || "Failed to load grades"))
       .finally(() => setLoading(false))
+    return () => {
+      mounted = false
+    }
+  }, [])
+
+  useEffect(() => {
+    let mounted = true
+    setTestScoresLoading(true)
+    setTestScoresError("")
+
+    fetchTestScores()
+      .then((scores) => {
+        if (!mounted) return
+        setTestScores(scores)
+      })
+      .catch((e) => {
+        if (!mounted) return
+        setTestScoresError(e.message || "Failed to load test scores")
+      })
+      .finally(() => {
+        if (mounted) setTestScoresLoading(false)
+      })
+
     return () => {
       mounted = false
     }
@@ -75,6 +150,40 @@ export default function Grades() {
                 Taken: {summary.taken}/{quizzes.length} · Score: {summary.totalScore}/
                 {summary.totalPossible} · {summary.percent}%
               </div>
+            </div>
+
+            <div className="card">
+              <div style={{ fontWeight: 600, marginBottom: 6 }}>Test scores</div>
+              {testScoresLoading && <p className="muted">Loading test scores…</p>}
+              {!testScoresLoading && testScoresError && (
+                <p className="muted">{testScoresError}</p>
+              )}
+              {!testScoresLoading && !testScoresError && testScores.length === 0 && (
+                <p className="muted">No tests completed yet.</p>
+              )}
+              {!testScoresLoading && !testScoresError && testScores.length > 0 && (
+                <div style={{ display: "grid", gap: 6 }}>
+                  {testScores.map((test) => {
+                    const dateLabel = test.dateTaken
+                      ? new Date(test.dateTaken).toLocaleDateString()
+                      : "—"
+                    return (
+                      <div
+                        key={test.testId}
+                        style={{ display: "flex", justifyContent: "space-between" }}
+                      >
+                        <span>
+                          {test.title}{" "}
+                          <span className="muted" style={{ marginLeft: 6 }}>
+                            {dateLabel}
+                          </span>
+                        </span>
+                        <span className="muted">{test.score}</span>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
             </div>
 
             {quizzes.map((quiz) => {
