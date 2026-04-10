@@ -14,7 +14,7 @@ from django.utils import timezone
 import json
 from datetime import datetime, timezone as dt_timezone
 
-from .models import Role, Assignment, Test, Lesson, Module
+from .models import Role, Assignment, Test, Lesson, Module, Question
 from .services.ai_services import _generate_emails, _clean_response
 
 User = get_user_model()
