@@ -37,6 +37,12 @@ def _generate_emails(subject):
     The test may be focused in on one type of phishing scam.
     Subject: {subject}
 
+    When inserting fake links, leav no indicator that it is fake or not. For example, do NOT do this:
+    "click the link below to confirm your identity and review recent activity: [link to fake utility login]."
+
+    Instead, just generate a fake link that matches the email, for example:
+    "click the link below to confirm your identity and review recent activity: https://utilitycompany.com/account."
+
     Return your response as a JSON array with no additional text or markdown. Each email should be an object with the following fields:
     "sender", "subject", "body", "is_phishing" (boolean), "red_flags" (array of strings).
 

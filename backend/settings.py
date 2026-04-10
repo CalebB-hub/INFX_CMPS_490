@@ -86,12 +86,12 @@ WSGI_APPLICATION = 'backend.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
-# Set USE_SQLITE=1 in .env to use SQLite (no PostgreSQL needed). Remove it to use PostgreSQL.
+# Use DATABASE_URL if set (e.g., for Render Postgres), otherwise fall back to SQLite for local development
 DATABASES = {
-        'default': dj_database_url.config(
-         default=os.environ.get('postgresql://infx_490_db_gjyt_user:T57TDbhRR1tC8aOfWXn6N6yOA4TNjniE@dpg-d6s6fcp5pdvs73fga3qg-a.ohio-postgres.render.com/infx_490_db_gjyt')
-         )
-        }
+    'default': dj_database_url.config(
+        default='sqlite:///db.sqlite3'
+    )
+}
     
 
 
