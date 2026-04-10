@@ -11,7 +11,6 @@ from django.conf import settings
 from django.db.models import Avg, Count, Q
 from django.utils import timezone
 
-import google.generativeai as genai
 import json
 from datetime import datetime, timezone as dt_timezone
 
