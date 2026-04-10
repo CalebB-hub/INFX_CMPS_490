@@ -11,7 +11,6 @@ Django==6.0.2
 django-cors-headers==4.9.0
 djangorestframework==3.16.1
 djangorestframework_simplejwt==5.5.1
-google-ai-generativelanguage==0.6.15
 google-api-core==2.30.0
 google-api-python-client==2.193.0
 google-auth==2.49.1
@@ -26,7 +25,7 @@ idna==3.11
 mssql-django==1.7
 packaging==26.0
 proto-plus==1.27.1
-protobuf>=4.25.8,<6.0.0
+protobuf>=6.31.1,<7.0.0
 psycopg==3.3.3
 psycopg-binary==3.3.3
 psycopg2-binary==2.9.11
