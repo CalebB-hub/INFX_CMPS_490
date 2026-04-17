@@ -20,6 +20,7 @@ import LessonDetails from "./pages/LessonDetails";
 import Lessons from "./pages/Lessons";
 import ProfileRouter from "./pages/ProfileRouter";
 import Test from "./pages/Test";
+import Inbox from "./pages/Inbox";
 
 
 export default function App() {
@@ -32,6 +33,7 @@ export default function App() {
       <Route path="/signup/company" element={<SignupCompany />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password" element={<ResetPassword />} />
+      <Route path="/inbox" element={<Inbox />} />
       
       {/* Protected Routes */}
       <Route path="/home" element={<ProtectedRoute><Home /></ProtectedRoute>} />
