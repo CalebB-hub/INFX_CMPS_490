@@ -623,6 +623,33 @@ def learning_lesson_detail(request, lesson_id):
     )
 
 
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def lesson_page_detail(request, lesson_id):
+    """
+    Dedicated endpoint for the Lessons page to fetch a single lesson.
+    """
+    lesson = get_object_or_404(
+        Lesson.objects.select_related('module'),
+        lesson_id=lesson_id,
+        user_id=request.user,
+    )
+
+    return Response(
+        {
+            'lessonId': lesson.lesson_id,
+            'moduleId': lesson.module.module_id if lesson.module else None,
+            'moduleTitle': lesson.module.title if lesson.module else None,
+            'title': lesson.title,
+            'lessonMaterial': lesson.lesson_material,
+            'questions': lesson.questions,
+            'score': float(lesson.score) if lesson.score is not None else None,
+            'completedAt': lesson.completed_at.isoformat() if lesson.completed_at else None,
+        },
+        status=status.HTTP_200_OK,
+    )
+
+
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def generate_test_emails(request):
