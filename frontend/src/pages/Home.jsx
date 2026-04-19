@@ -89,7 +89,7 @@ export default function Home() {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [navigate]);
 
   const stats = {
     phishingScore: Math.round(dashboard?.tests?.averageScore || 0),

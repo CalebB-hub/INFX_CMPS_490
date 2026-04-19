@@ -61,7 +61,7 @@ export default function Profile() {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [user]);
 
   async function handleLogout() {
     const token = localStorage.getItem("pf_auth_token");
@@ -77,7 +77,8 @@ export default function Profile() {
           },
           body: JSON.stringify({ refreshToken }),
         });
-      } catch {
+      } catch (error) {
+        console.warn("Logout request failed:", error);
       }
     }
 
@@ -99,7 +100,6 @@ export default function Profile() {
           <div className="card">
             <h3 style={{ marginTop: 0 }}>Profile Information</h3>
             <p><b>Name:</b> {[user?.firstName, user?.lastName].filter(Boolean).join(" ") || "-"}</p>
-            <p><b>Username:</b> {user?.email || "-"}</p>
             <p><b>Email:</b> {user?.email || "-"}</p>
             <p><b>Organization:</b> {user?.company || "-"}</p>
             <p><b>Role:</b> {user?.role || "-"}</p>

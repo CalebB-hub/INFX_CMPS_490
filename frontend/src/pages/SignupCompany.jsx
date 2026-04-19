@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { mockSignup } from "../mock/mockApi";
 import PasswordStrength from "../components/PasswordStrength";
 import PasswordToggleIcon from "../components/PasswordToggleIcon";
 import { computeChecks } from "../utils/passwordUtils";
+
+const API_BASE = "http://localhost:8000/api";
 
 export default function SignupCompany() {
   const navigate = useNavigate();
@@ -17,7 +18,33 @@ export default function SignupCompany() {
     setStatus({ loading: true, error: "", success: "" });
 
     try {
-      await mockSignup({ ...formData, role: "organization" });
+      const [firstName, ...rest] = formData.name.trim().split(/\s+/);
+      const lastName = rest.join(" ");
+
+      if (!firstName || !lastName) {
+        throw new Error("Please enter both a first and last name.");
+      }
+
+      const response = await fetch(`${API_BASE}/auth/signup/`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email: formData.email.trim(),
+          password: formData.password,
+          firstName,
+          lastName,
+          companyName: formData.companyName.trim(),
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.details?.join(" ") || data.error || "Unable to create organization account.");
+      }
+
       setStatus({ loading: false, success: "Organization registered! Redirecting...", error: "" });
       
       // The Reroute: sends the admin to the login page

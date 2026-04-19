@@ -29,6 +29,15 @@ async function fetchWithAuth(url) {
   });
 }
 
+function parseMaybeJson(raw) {
+  if (!raw) return {};
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+}
+
 async function fetchModules() {
   let lastError = null;
 
@@ -37,7 +46,12 @@ async function fetchModules() {
       const response = await fetchWithAuth(`${base}/learning/modules?scope=me`);
 
       const raw = await response.text();
-      const data = raw ? JSON.parse(raw) : {};
+      const data = parseMaybeJson(raw);
+
+      if (data === null) {
+        // The endpoint returned non-JSON (often an HTML fallback page).
+        throw new Error("Server returned an unexpected response format.");
+      }
 
       if (!response.ok) {
         throw new Error(data.error || "Failed to load modules");

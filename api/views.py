@@ -14,7 +14,7 @@ from django.utils import timezone
 import json
 from datetime import datetime, timezone as dt_timezone
 
-from .models import Role, Assignment, Test, Lesson, Module, Question
+from .models import Role, Company, Assignment, Test, Lesson, Module, Question
 from .services.ai_services import _generate_emails, _clean_response
 
 User = get_user_model()
@@ -34,7 +34,7 @@ def hello_world(request):
 def signup(request):
     """
     User registration. No auth required.
-    Body: email, password, firstName, lastName.
+    Body: email, password, firstName, lastName, optional companyName.
     Returns 201 with id, email, message. Returns 409 if email exists.
     """
     # Parse and validate required fields
@@ -56,6 +56,7 @@ def signup(request):
     password = str(body['password'])
     first_name = str(body['firstName']).strip()
     last_name = str(body['lastName']).strip()
+    company_name = str(body.get('companyName', '')).strip()
 
     # Basic email format check
     if '@' not in email or '.' not in email.split('@')[-1]:
@@ -82,11 +83,24 @@ def signup(request):
             status=status.HTTP_400_BAD_REQUEST
         )
 
-    # Default role for new signups (required by User model)
-    default_role, _ = Role.objects.get_or_create(
-        role_name='User',
-        defaults={'description': 'Default user role', 'permissions': ''}
-    )
+    # Organization signups include companyName and get organization role + company.
+    is_organization_signup = bool(company_name)
+
+    if is_organization_signup:
+        user_role, _ = Role.objects.get_or_create(
+            role_name='Organization',
+            defaults={'description': 'Organization account', 'permissions': ''}
+        )
+        company, _ = Company.objects.get_or_create(
+            name=company_name,
+            defaults={'location': 'N/A'}
+        )
+    else:
+        user_role, _ = Role.objects.get_or_create(
+            role_name='User',
+            defaults={'description': 'Default user role', 'permissions': ''}
+        )
+        company = None
 
     # Create user (password is hashed by create_user)
     user = User.objects.create_user(
@@ -95,14 +109,16 @@ def signup(request):
         password=password,
         first_name=first_name,
         last_name=last_name,
-        role=default_role,
-        company=None,
+        role=user_role,
+        company=company,
     )
 
     return Response(
         {
             'id': user.user_id,
             'email': user.email,
+            'company': user.company.name if user.company else None,
+            'role': user.role.role_name if user.role else None,
             'message': 'User created successfully',
         },
         status=status.HTTP_201_CREATED,
@@ -308,6 +324,7 @@ def me(request):
             'email': user.email,
             'firstName': user.first_name,
             'lastName': user.last_name,
+            'company': user.company.name if user.company else None,
             'role': user.role.role_name if user.role else None,
         },
         status=status.HTTP_200_OK,
@@ -607,6 +624,33 @@ def learning_lesson_detail(request, lesson_id):
     Returns a single lesson for the current user.
     """
     lesson = get_object_or_404(Lesson, lesson_id=lesson_id, user_id=request.user)
+
+    return Response(
+        {
+            'lessonId': lesson.lesson_id,
+            'moduleId': lesson.module.module_id if lesson.module else None,
+            'moduleTitle': lesson.module.title if lesson.module else None,
+            'title': lesson.title,
+            'lessonMaterial': lesson.lesson_material,
+            'questions': lesson.questions,
+            'score': float(lesson.score) if lesson.score is not None else None,
+            'completedAt': lesson.completed_at.isoformat() if lesson.completed_at else None,
+        },
+        status=status.HTTP_200_OK,
+    )
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def lesson_page_detail(request, lesson_id):
+    """
+    Dedicated endpoint for the Lessons page to fetch a single lesson.
+    """
+    lesson = get_object_or_404(
+        Lesson.objects.select_related('module'),
+        lesson_id=lesson_id,
+        user_id=request.user,
+    )
 
     return Response(
         {
