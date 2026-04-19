@@ -1,0 +1,31 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.venv/
+venv/
+
+# Node
+frontend/node_modules/
+node_modules/
+
+# VCS / editor
+.git/
+.vscode/
+
+# Build artifacts
+frontend/dist/
+staticfiles/
+
+# Env / secrets
+.env
+.env.*
+
+# Test/cache
+.pytest_cache/
+.mypy_cache/
+coverage*
+
+# OS
+.DS_Store
