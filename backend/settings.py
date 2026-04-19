@@ -168,10 +168,21 @@ CORS_ALLOWED_ORIGINS = os.getenv(
     'http://localhost:5173,http://127.0.0.1:5173,https://mysite.onrender.com,https://infx-cmps-490.onrender.com',
 ).split(',')
 
+CORS_ALLOWED_ORIGINS = [origin.strip() for origin in CORS_ALLOWED_ORIGINS if origin.strip()]
+
+CORS_ALLOWED_ORIGIN_REGEXES = os.getenv(
+    'CORS_ALLOWED_ORIGIN_REGEXES',
+    r'^https://.*\.onrender\.com$',
+).split(',')
+
+CORS_ALLOWED_ORIGIN_REGEXES = [pattern.strip() for pattern in CORS_ALLOWED_ORIGIN_REGEXES if pattern.strip()]
+
 CSRF_TRUSTED_ORIGINS = os.getenv(
     'CSRF_TRUSTED_ORIGINS',
     'https://mysite.onrender.com,https://infx-cmps-490.onrender.com',
 ).split(',')
+
+CSRF_TRUSTED_ORIGINS = [origin.strip() for origin in CSRF_TRUSTED_ORIGINS if origin.strip()]
 
 # REST Framework settings
 REST_FRAMEWORK = {
