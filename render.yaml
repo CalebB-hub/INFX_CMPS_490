@@ -17,6 +17,12 @@ services:
         fromDatabase:
           name: INFX_490_DB
           property: connectionString
+      - key: DEBUG
+        value: 'false'
+      - key: ALLOWED_HOSTS
+        value: localhost,127.0.0.1,mysite.onrender.com,infx-cmps-490.onrender.com
+      - key: CSRF_TRUSTED_ORIGINS
+        value: https://mysite.onrender.com,https://infx-cmps-490.onrender.com
       - key: SECRET_KEY
         generateValue: true
       - key: WEB_CONCURRENCY
