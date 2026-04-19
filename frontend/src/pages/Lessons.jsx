@@ -2,8 +2,7 @@ import { useEffect, useMemo, useState } from "react"
 import { Link } from "react-router-dom"
 import TopNav from "../components/TopNav"
 import { getAccessToken, refreshAccessToken } from "../services/authService"
-
-const API_BASES = ["http://localhost:8000/api", "/api"]
+import { API_BASE } from "../services/apiConfig"
 
 async function fetchWithAuth(url) {
   const token = getAccessToken()
@@ -30,26 +29,16 @@ async function fetchWithAuth(url) {
 }
 
 async function fetchLessons() {
-  let lastError = null
+  const response = await fetchWithAuth(`${API_BASE}/learning/lessons`)
 
-  for (const base of API_BASES) {
-    try {
-      const response = await fetchWithAuth(`${base}/learning/lessons`)
+  const raw = await response.text()
+  const data = raw ? JSON.parse(raw) : {}
 
-      const raw = await response.text()
-      const data = raw ? JSON.parse(raw) : {}
-
-      if (!response.ok) {
-        throw new Error(data.error || "Failed to load lessons")
-      }
-
-      return data.lessons || []
-    } catch (error) {
-      lastError = error
-    }
+  if (!response.ok) {
+    throw new Error(data.error || "Failed to load lessons")
   }
 
-  throw lastError || new Error("Failed to load lessons")
+  return data.lessons || []
 }
 
 export default function Lessons() {

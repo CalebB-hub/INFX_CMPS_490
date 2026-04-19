@@ -2,8 +2,7 @@ import { NavLink, useNavigate } from "react-router-dom";
 import { useEffect, useRef, useState } from "react";
 import { getAccessToken, getUser, refreshAccessToken } from "../services/authService";
 import PhishFreeLogoText from "../Logos/Phish Free Logo Text.png";
-
-const API_BASES = ["http://localhost:8000/api", "/api"];
+import { API_BASE } from "../services/apiConfig";
 
 export default function TopNav() {
   const navigate = useNavigate();
@@ -79,38 +78,32 @@ export default function TopNav() {
       setInboxLoading(true);
       setInboxError("");
 
-      let lastError = null;
-      for (const base of API_BASES) {
-        try {
-          const response = await fetchWithAuth(`${base}/learning/lessons`);
-          const raw = await response.text();
-          const data = raw ? JSON.parse(raw) : {};
+      try {
+        const response = await fetchWithAuth(`${API_BASE}/learning/lessons`);
+        const raw = await response.text();
+        const data = raw ? JSON.parse(raw) : {};
 
-          if (!response.ok) {
-            throw new Error(data.error || "Failed to load inbox");
-          }
-
-          const lessons = data.lessons || [];
-          const messages = lessons
-            .filter((lesson) => lesson.completedAt)
-            .map((lesson) => ({
-              id: `lesson-${lesson.lessonId}`,
-              text: `Test available for ${lesson.title}`,
-              href: "/learning/quizzes",
-            }));
-
-          if (!mounted) return;
-          setInboxMessages(messages);
-          setInboxLoading(false);
-          return;
-        } catch (error) {
-          lastError = error;
+        if (!response.ok) {
+          throw new Error(data.error || "Failed to load inbox");
         }
-      }
 
-      if (!mounted) return;
-      setInboxError(lastError?.message || "Failed to load inbox");
-      setInboxLoading(false);
+        const lessons = data.lessons || [];
+        const messages = lessons
+          .filter((lesson) => lesson.completedAt)
+          .map((lesson) => ({
+            id: `lesson-${lesson.lessonId}`,
+            text: `Test available for ${lesson.title}`,
+            href: "/learning/quizzes",
+          }));
+
+        if (!mounted) return;
+        setInboxMessages(messages);
+        setInboxLoading(false);
+      } catch (error) {
+        if (!mounted) return;
+        setInboxError(error?.message || "Failed to load inbox");
+        setInboxLoading(false);
+      }
     }
 
     loadInbox();

@@ -1,37 +1,27 @@
 import { useEffect, useState } from "react"
 import TopNav from "../components/TopNav"
+import { API_BASE } from "../services/apiConfig"
 
 const INBOX_STORAGE_KEY = "pf_inbox_messages"
-const API_BASES = ["http://localhost:8000/api", "/api"]
 
 async function fetchGeneratedEmails(token, subject) {
-  let lastError = null
+  const response = await fetch(`${API_BASE}/generate-test-emails/`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ subject }),
+  })
 
-  for (const base of API_BASES) {
-    try {
-      const response = await fetch(`${base}/generate-test-emails/`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ subject }),
-      })
+  const raw = await response.text()
+  const data = raw ? JSON.parse(raw) : {}
 
-      const raw = await response.text()
-      const data = raw ? JSON.parse(raw) : {}
-
-      if (!response.ok) {
-        throw new Error(data.error || "Failed to generate test emails")
-      }
-
-      return Array.isArray(data.emails) ? data.emails : []
-    } catch (error) {
-      lastError = error
-    }
+  if (!response.ok) {
+    throw new Error(data.error || "Failed to generate test emails")
   }
 
-  throw lastError || new Error("Failed to generate test emails")
+  return Array.isArray(data.emails) ? data.emails : []
 }
 
 export default function Test() {

@@ -2,8 +2,8 @@ import { useMemo, useState } from "react";
 import { useLocation, useNavigate, Link } from "react-router-dom";
 import PhishFreeFullLogo from "../Logos/Phish Free Full Logo.png";
 import PasswordToggleIcon from "../components/PasswordToggleIcon";
+import { API_BASE } from "../services/apiConfig";
 
-const API_BASE = "http://localhost:8000/api";
 const TOKEN_KEY = "pf_auth_token";
 const REFRESH_TOKEN_KEY = "pf_refresh_token";
 const USER_KEY = "pf_user";

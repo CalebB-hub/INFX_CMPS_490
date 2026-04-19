@@ -2,8 +2,8 @@ import { useEffect, useState } from "react";
 import TopNav from "../components/TopNav";
 import { getUser, logout } from "../services/authService";
 import { useNavigate } from "react-router-dom";
+import { API_BASE } from "../services/apiConfig";
 
-const API_BASE = "http://localhost:8000/api";
 const USER_KEY = "pf_user";
 
 export default function Profile() {

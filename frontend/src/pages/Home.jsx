@@ -2,8 +2,7 @@ import { useEffect, useState } from "react";
 import TopNav from "../components/TopNav";
 import { useNavigate } from "react-router-dom";
 import { getAccessToken, logout, refreshAccessToken } from "../services/authService";
-
-const API_BASE = "http://localhost:8000/api";
+import { API_BASE } from "../services/apiConfig";
 
 async function requestDashboard(token) {
   const response = await fetch(`${API_BASE}/dashboard/me`, {
