@@ -1,9 +1,6 @@
-from django.core.management.base import BaseCommand, CommandError
-from django.contrib.auth import get_user_model
-from api.models import Lesson, Module
+from django.core.management.base import BaseCommand
+from api.models import Lesson
 import json
-
-User = get_user_model()
 
 
 LESSONS = [
@@ -149,36 +146,20 @@ This final lesson is broader because it teaches judgment under pressure. High-st
 class Command(BaseCommand):
     help = "Seed phishing lessons into the Lesson table"
 
-    def add_arguments(self, parser):
-        parser.add_argument("--user_email", type=str, required=True)
-        parser.add_argument("--module_id", type=int, required=False)
-
     def handle(self, *args, **options):
-        user_email = options["user_email"]
-        module_id = options.get("module_id")
-
-        try:
-            user = User.objects.get(email=user_email)
-        except User.DoesNotExist:
-            raise CommandError(f"User with email '{user_email}' does not exist.")
-
-        module = None
-        if module_id is not None:
-            try:
-                module = Module.objects.get(pk=module_id)
-            except Module.DoesNotExist:
-                raise CommandError(f"Module with id '{module_id}' does not exist.")
-
         for item in LESSONS:
+            # Extract questions, choices, and answers from the LESSONS data
+            questions = [entry["question"] for entry in item["questions"]]
+            choices = [entry["choices"] for entry in item["questions"]]
+            answers = [entry["answer"] for entry in item["questions"]]
+
             lesson, created = Lesson.objects.update_or_create(
                 title=item["title"],
-                user_id=user,
                 defaults={
-                    "module": module,
                     "lesson_material": item["lesson_material"],
-                    "questions": json.dumps(item["questions"], indent=2),
-                    "score": None,
-                    "completed_at": None,
+                    "questions": json.dumps(questions, indent=2),
+                    "choices": json.dumps(choices, indent=2),
+                    "answers": json.dumps(answers, indent=2),
                 },
             )
 

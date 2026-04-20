@@ -14,7 +14,7 @@ from django.utils import timezone
 import json
 from datetime import datetime, timezone as dt_timezone
 
-from .models import Role, Company, Assignment, Test, Lesson, Module, Question
+from .models import Role, Company, Assignment, Test, Lesson, Question, LessonScore
 from .services.ai_services import _generate_emails, _clean_response
 
 User = get_user_model()
@@ -506,73 +506,61 @@ def dashboard_me(request):
 @permission_classes([IsAuthenticated])
 def learning_modules(request):
     """
-    Returns learning modules based on the scope parameter.
+    Returns lessons grouped as a single 'Lessons' module.
     
     Query Parameters:
     - scope: Defines which modules to return
-      - 'me': Returns modules with user's progress (completed lessons, scores)
-      - 'all': Returns all published modules (default)
+      - 'me': Returns lessons with user's scores
+      - 'all': Returns all lessons (default)
     
-    Returns list of modules with:
-    - Module details (id, title, description, difficulty, duration)
-    - Lesson count
-    - For scope=me: user's progress, completed lessons, average score
+    Returns a single module with all lessons and optional user progress.
     """
     scope = request.query_params.get('scope', 'all')
     user = request.user
     
-    # Get all published modules
-    modules = Module.objects.filter(is_published=True).order_by('created_at')
+    # Get all lessons
+    lessons = Lesson.objects.all().order_by('lesson_id')
+    total_lessons = lessons.count()
     
-    modules_list = []
+    module_data = {
+        'moduleId': 1,
+        'title': 'Lessons',
+        'description': 'All phishing awareness lessons',
+        'difficultyLevel': 'beginner',
+        'estimatedDuration': '2 hours',
+        'totalLessons': total_lessons,
+    }
     
-    for module in modules:
-        # Get all lessons in this module
-        module_lessons = Lesson.objects.filter(module=module)
-        total_lessons = module_lessons.count()
+    if scope == 'me':
+        # Get user's lesson scores
+        user_scores = LessonScore.objects.filter(user=user)
+        completed_lessons = user_scores.count()
         
-        module_data = {
-            'moduleId': module.module_id,
-            'title': module.title,
-            'description': module.description,
-            'difficultyLevel': module.difficulty_level,
-            'estimatedDuration': module.estimated_duration,
-            'totalLessons': total_lessons,
-        }
+        # Calculate progress
+        progress_percentage = (completed_lessons / total_lessons * 100) if total_lessons > 0 else 0
         
-        if scope == 'me':
-            # Get user's lessons for this module
-            user_lessons = module_lessons.filter(user_id=user)
-            completed_lessons = user_lessons.filter(completed_at__isnull=False)
-            
-            # Calculate progress
-            completed_count = completed_lessons.count()
-            progress_percentage = (completed_count / total_lessons * 100) if total_lessons > 0 else 0
-            
-            # Calculate average score for completed lessons
-            avg_score = completed_lessons.aggregate(avg=Avg('score'))['avg']
-            
-            # Get recent activity
-            last_activity = user_lessons.order_by('-completed_at').first()
-            
-            module_data.update({
-                'progress': {
-                    'completedLessons': completed_count,
-                    'totalLessons': total_lessons,
-                    'progressPercentage': round(progress_percentage, 2),
-                    'averageScore': float(avg_score) if avg_score else None,
-                    'lastActivity': last_activity.completed_at.isoformat() if last_activity and last_activity.completed_at else None,
-                },
-                'isStarted': user_lessons.exists(),
-                'isCompleted': completed_count == total_lessons and total_lessons > 0,
-            })
+        # Calculate average score
+        avg_score = user_scores.aggregate(avg=Avg('score'))['avg']
         
-        modules_list.append(module_data)
+        # Get recent activity
+        last_activity = user_scores.order_by('-updated_at').first()
+        
+        module_data.update({
+            'progress': {
+                'completedLessons': completed_lessons,
+                'totalLessons': total_lessons,
+                'progressPercentage': round(progress_percentage, 2),
+                'averageScore': float(avg_score) if avg_score else None,
+                'lastActivity': last_activity.updated_at.isoformat() if last_activity else None,
+            },
+            'isStarted': user_scores.exists(),
+            'isCompleted': completed_lessons == total_lessons and total_lessons > 0,
+        })
     
     return Response(
         {
-            'modules': modules_list,
-            'totalModules': len(modules_list),
+            'modules': [module_data],
+            'totalModules': 1,
             'scope': scope,
         },
         status=status.HTTP_200_OK,

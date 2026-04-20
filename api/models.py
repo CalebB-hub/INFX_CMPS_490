@@ -1,6 +1,8 @@
 from django.db import models
+from django.db import transaction
 from django.conf import settings
 from django.contrib.auth.models import AbstractUser
+from decimal import Decimal
 
 # Create your models here.
 
@@ -108,31 +110,54 @@ class Assignment(models.Model):
     due_date = models.DateTimeField()
     start_date = models.DateTimeField()
 
-class Module(models.Model):
-    module_id = models.AutoField(primary_key=True)
+class Lesson(models.Model):
+    lesson_id = models.AutoField(primary_key=True)
     title = models.CharField(max_length=255)
-    description = models.TextField()
-    difficulty_level = models.CharField(max_length=50, default='beginner')  # beginner, intermediate, advanced
-    estimated_duration = models.IntegerField(help_text='Estimated duration in minutes')
-    is_published = models.BooleanField(default=True)
+    choices = models.TextField()
+    questions = models.TextField()
+    answers = models.TextField()
+    lesson_material = models.TextField()
+
+
+class LessonScore(models.Model):
+    lesson_score_id = models.AutoField(primary_key=True)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='lesson_scores'
+    )
+    lesson = models.ForeignKey(
+        Lesson,
+        on_delete=models.CASCADE,
+        related_name='scores'
+    )
+    score = models.DecimalField(decimal_places=2, max_digits=5)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
-class Lesson(models.Model):
-    lesson_id = models.AutoField(primary_key=True)
-    module = models.ForeignKey(
-        Module,
-        null=True,
-        blank=True,
-        on_delete=models.CASCADE,
-        related_name='lessons'
-    )
-    title = models.CharField(max_length=255)
-    score = models.DecimalField(decimal_places=2, max_digits=5, null=True, blank=True)
-    user_id = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE
-    )
-    questions = models.TextField()
-    lesson_material = models.TextField()
-    completed_at = models.DateTimeField(null=True, blank=True)
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['user', 'lesson'], name='unique_user_lesson_score')
+        ]
+
+    @classmethod
+    def record_attempt(cls, user, lesson, score):
+        score_value = Decimal(str(score))
+
+        with transaction.atomic():
+            lesson_score, created = cls.objects.select_for_update().get_or_create(
+                user=user,
+                lesson=lesson,
+                defaults={'score': score_value},
+            )
+
+            if created:
+                return lesson_score, True
+
+            if score_value > lesson_score.score:
+                lesson_score.score = score_value
+                lesson_score.save(update_fields=['score', 'updated_at'])
+                return lesson_score, True
+
+            return lesson_score, False
+
