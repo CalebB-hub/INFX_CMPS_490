@@ -1,59 +1,193 @@
-import { useState } from "react"
+import { useEffect, useMemo, useState } from "react"
+import { useLocation, useNavigate } from "react-router-dom"
 import TopNav from "../components/TopNav"
+import { getAccessToken, refreshAccessToken } from "../services/authService"
 
-const INBOX_STORAGE_KEY = "pf_inbox_messages"
+const API_BASES = ["http://localhost:8000/api", "/api"]
 
-const SAMPLE_EMAIL = {
-  subject: "Action Required: Update Your Payroll Details",
-  from: "HR Support <hr-support@payroll-alerts.com>",
-  body: [
-    "Hello,",
-    "",
-    "We detected an issue with your payroll profile. To avoid payment delays, please verify your account information within the next 2 hours.",
-    "",
-    "Click the secure link below to confirm your details:",
-    "http://payroll-verify.example.com/update",
-    "",
-    "Thank you,",
-    "HR Support Team",
-  ],
+async function fetchWithAuth(url) {
+  const token = getAccessToken()
+  if (!token) {
+    throw new Error("You are not logged in.")
+  }
+
+  const response = await fetch(url, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  })
+
+  if (response.status !== 401) {
+    return response
+  }
+
+  const refreshedToken = await refreshAccessToken()
+  return fetch(url, {
+    headers: {
+      Authorization: `Bearer ${refreshedToken}`,
+    },
+  })
+}
+
+async function fetchTests() {
+  let lastError = null
+
+  for (const base of API_BASES) {
+    try {
+      const response = await fetchWithAuth(`${base}/learning/tests`)
+      const raw = await response.text()
+      const data = raw ? JSON.parse(raw) : {}
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to load tests")
+      }
+
+      return Array.isArray(data.tests) ? data.tests : []
+    } catch (error) {
+      lastError = error
+    }
+  }
+
+  throw lastError || new Error("Failed to load tests")
+}
+
+function parseTestDescription(description) {
+  if (!description) return null
+  try {
+    const parsed = JSON.parse(description)
+    if (parsed && typeof parsed === "object") return parsed
+  } catch (e) {
+    // ignore parse errors
+  }
+  return null
 }
 
 export default function Test() {
-  const [response, setResponse] = useState("")
+  const location = useLocation()
+  const navigate = useNavigate()
+  const [tests, setTests] = useState([])
+  const [activeTestId, setActiveTestId] = useState(null)
+  const [loadingTests, setLoadingTests] = useState(true)
+  const [error, setError] = useState("")
+  const [answers, setAnswers] = useState({})
   const [submitted, setSubmitted] = useState(false)
   const [statusMessage, setStatusMessage] = useState("")
 
-  function saveInboxMessage() {
-    const message = {
-      id: `test-${Date.now()}`,
-      text: "Test submitted — review your response",
-      href: "/test",
-      createdAt: new Date().toISOString(),
-    }
+  const lessonIdParam = useMemo(() => {
+    const params = new URLSearchParams(location.search)
+    const value = params.get("lessonId")
+    return value ? String(value) : null
+  }, [location.search])
 
-    try {
-      const raw = localStorage.getItem(INBOX_STORAGE_KEY)
-      const parsed = raw ? JSON.parse(raw) : []
-      const next = Array.isArray(parsed) ? [message, ...parsed] : [message]
-      localStorage.setItem(INBOX_STORAGE_KEY, JSON.stringify(next))
-    } catch {
-      localStorage.setItem(INBOX_STORAGE_KEY, JSON.stringify([message]))
-    }
+  useEffect(() => {
+    let mounted = true
+    setLoadingTests(true)
+    setError("")
 
-    window.dispatchEvent(new Event("pf_inbox_updated"))
-  }
+    fetchTests()
+      .then((data) => {
+        if (!mounted) return
+        setTests(data)
+        if (lessonIdParam) {
+          const matchingTest = data.find((test) => {
+            const meta = parseTestDescription(test.description)
+            return meta?.lessonId !== undefined && String(meta.lessonId) === lessonIdParam
+          })
+          setActiveTestId(matchingTest?.testId || data[0]?.testId || null)
+        } else {
+          setActiveTestId(data[0]?.testId || null)
+        }
+      })
+      .catch((err) => {
+        if (!mounted) return
+        setError(err.message || "Failed to load tests")
+      })
+      .finally(() => {
+        if (mounted) setLoadingTests(false)
+      })
+
+    return () => {
+      mounted = false
+    }
+  }, [lessonIdParam])
+
+  const activeTest = useMemo(
+    () => tests.find((test) => test.testId === activeTestId) || null,
+    [tests, activeTestId]
+  )
+
+  const emailParts = useMemo(() => {
+    if (!activeTest) return null
+    const fallback = {
+      subject: activeTest.title || "Email test",
+      sender: "Unknown sender",
+      body: "",
+    }
+    if (!activeTest.description) return fallback
+    const parsed = parseTestDescription(activeTest.description)
+    if (parsed) {
+      const hasEmailFields =
+        parsed.subject || parsed.body || parsed.sender || parsed.from || parsed.content
+      if (hasEmailFields) {
+        return {
+          subject: parsed.subject || fallback.subject,
+          sender: parsed.sender || parsed.from || fallback.sender,
+          body: parsed.body || parsed.content || parsed.email || "",
+        }
+      }
+    }
+    return {
+      ...fallback,
+      body: activeTest.description,
+    }
+  }, [activeTest])
 
   function handleSubmit(e) {
     e.preventDefault()
-    if (!response.trim()) {
-      setStatusMessage("Please describe the mistakes you see in the email.")
+    if (!activeTest) {
+      setStatusMessage("No test loaded.")
+      return
+    }
+    const questions = activeTest.questions || []
+    const unanswered = questions.filter((q) => !answers[q.questionId])
+    if (unanswered.length > 0) {
+      setStatusMessage("Answer all questions before submitting.")
       return
     }
 
+    const correctCount = questions.reduce((acc, q) => {
+      const expected = String(q.answer ?? "").toLowerCase()
+      const selected = String(answers[q.questionId] ?? "").toLowerCase()
+      if (!expected) return acc
+      return expected === selected ? acc + 1 : acc
+    }, 0)
+    const total = questions.length
+    const percent = total > 0 ? Math.round((correctCount / total) * 100) : 0
+
+    const payload = {
+      testId: activeTest.testId,
+      lessonId: lessonIdParam,
+      title: activeTest.title,
+      score: correctCount,
+      total,
+      percent,
+      submittedAt: new Date().toISOString(),
+    }
+
+    try {
+      const raw = localStorage.getItem("testGrades")
+      const existing = raw ? JSON.parse(raw) : {}
+      localStorage.setItem(
+        "testGrades",
+        JSON.stringify({ ...existing, [activeTest.testId]: payload })
+      )
+    } catch (e) {
+      // ignore storage errors
+    }
+
     setSubmitted(true)
-    setStatusMessage("Saved! Check your inbox for the test message.")
-    saveInboxMessage()
+    setStatusMessage("Responses saved.")
+    navigate("/grades")
   }
 
   return (
@@ -61,31 +195,65 @@ export default function Test() {
       <TopNav />
       <main className="page">
         <h2>Test</h2>
-        <p className="muted">
-          Review the email and identify any mistakes or red flags.
-        </p>
+        <p className="muted">Review the email and answer the questions below.</p>
 
         <div className="card" style={{ marginTop: 16 }}>
-          <div style={{ fontWeight: 600, marginBottom: 8 }}>
-            Subject: {SAMPLE_EMAIL.subject}
-          </div>
-          <div className="muted" style={{ marginBottom: 12 }}>
-            From: {SAMPLE_EMAIL.from}
-          </div>
-          <div style={{ whiteSpace: "pre-line" }}>{SAMPLE_EMAIL.body.join("\n")}</div>
+          {loadingTests && <div className="muted">Loading test email...</div>}
+          {!loadingTests && error && <div className="muted">{error}</div>}
+          {!loadingTests && !error && !activeTest && (
+            <div className="muted">
+              {lessonIdParam
+                ? "No test available for this lesson yet."
+                : "No tests available yet."}
+            </div>
+          )}
+          {!loadingTests && !error && activeTest && emailParts && (
+            <>
+              <div style={{ fontWeight: 600, marginBottom: 8 }}>
+                Subject: {emailParts.subject || activeTest.title}
+              </div>
+              <div className="muted" style={{ marginBottom: 12 }}>
+                From: {emailParts.sender || "Unknown sender"}
+              </div>
+              <div style={{ whiteSpace: "pre-line" }}>
+                {Array.isArray(emailParts.body)
+                  ? emailParts.body.join("\n")
+                  : String(emailParts.body || "")}
+              </div>
+            </>
+          )}
         </div>
 
         <form onSubmit={handleSubmit} className="card" style={{ marginTop: 16 }}>
-          <label style={{ display: "block", fontWeight: 600, marginBottom: 8 }}>
-            What mistakes do you see in this email?
-          </label>
-          <textarea
-            rows={6}
-            value={response}
-            onChange={(e) => setResponse(e.target.value)}
-            placeholder="List the issues you notice (e.g., urgency, suspicious link, sender mismatch)."
-            style={{ width: "100%", padding: 12, resize: "vertical" }}
-          />
+          {!activeTest && <div className="muted">No questions available.</div>}
+          {activeTest?.questions?.map((question) => (
+            <div key={question.questionId} style={{ marginBottom: 12 }}>
+              <div style={{ fontWeight: 600, marginBottom: 6 }}>
+                {question.questionText}
+              </div>
+              {["Phishing", "Not phishing"].map((option) => (
+                <label
+                  key={`${question.questionId}-${option}`}
+                  style={{ display: "flex", alignItems: "center", gap: 8 }}
+                >
+                  <input
+                    type="radio"
+                    name={`question-${question.questionId}`}
+                    value={option}
+                    checked={answers[question.questionId] === option}
+                    disabled={submitted}
+                    onChange={() =>
+                      setAnswers((prev) => ({
+                        ...prev,
+                        [question.questionId]: option,
+                      }))
+                    }
+                  />
+                  <span>{option}</span>
+                </label>
+              ))}
+            </div>
+          ))}
           <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 12 }}>
             <button className="btn" type="submit">
               {submitted ? "Submitted" : "Submit response"}

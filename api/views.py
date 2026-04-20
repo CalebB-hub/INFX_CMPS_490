@@ -11,12 +11,10 @@ from django.conf import settings
 from django.db.models import Avg, Count, Q
 from django.utils import timezone
 
-import google.generativeai as genai
 import json
 from datetime import datetime, timezone as dt_timezone
 
-from .models import Role, Assignment, Test, Lesson, Module
-from .services.ai_services import _generate_emails, _clean_response
+from .models import Role, Assignment, Test, Lesson, Module, Question
 
 User = get_user_model()
 
@@ -624,29 +622,72 @@ def learning_lesson_detail(request, lesson_id):
     )
 
 
-@api_view(['POST'])
+@api_view(['GET'])
 @permission_classes([IsAuthenticated])
-def generate_test_emails(request):
+def lesson_page_detail(request, lesson_id):
     """
-    Send a prompt to Gemini and return generated text.
-    Body: { "prompt": string }
+    Dedicated endpoint for the Lessons page to fetch a single lesson.
     """
-    subject = request.data.get('subject')
+    lesson = get_object_or_404(
+        Lesson.objects.select_related('module'),
+        lesson_id=lesson_id,
+        user_id=request.user,
+    )
 
-    if not subject or not str(subject).strip():
-        return Response(
-            {'error': 'subject is required'},
-            status=status.HTTP_400_BAD_REQUEST,
+    return Response(
+        {
+            'lessonId': lesson.lesson_id,
+            'moduleId': lesson.module.module_id if lesson.module else None,
+            'moduleTitle': lesson.module.title if lesson.module else None,
+            'title': lesson.title,
+            'lessonMaterial': lesson.lesson_material,
+            'questions': lesson.questions,
+            'score': float(lesson.score) if lesson.score is not None else None,
+            'completedAt': lesson.completed_at.isoformat() if lesson.completed_at else None,
+        },
+        status=status.HTTP_200_OK,
+    )
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def learning_tests(request):
+    """
+    Returns tests with email content and multiple-choice questions
+    for the current user.
+    """
+    tests = Test.objects.filter(user_id=request.user).order_by('-date_taken')
+    payload = []
+
+    for test in tests:
+        questions = Question.objects.filter(test_id=test).order_by('question_id')
+        questions_payload = [
+            {
+                'questionId': q.question_id,
+                'questionText': q.question_text,
+                'answer': q.answer,
+            }
+            for q in questions
+        ]
+
+        payload.append(
+            {
+                'testId': test.test_id,
+                'title': test.title,
+                'description': test.description,
+                'dateTaken': test.date_taken.isoformat() if test.date_taken else None,
+                'score': float(test.score) if test.score is not None else None,
+                'questions': questions_payload,
+            }
         )
-    
-    try:
-        emails = _clean_response(_generate_emails(str(subject).strip()))
-        return Response({'emails': emails}, status=status.HTTP_200_OK)
-    except Exception as e:
-        return Response(
-            {'error': f'Failed to generate emails: {str(e)}'},
-            status=status.HTTP_502_BAD_GATEWAY,
-        )
+
+    return Response(
+        {
+            'tests': payload,
+            'totalTests': len(payload),
+        },
+        status=status.HTTP_200_OK,
+    )
 
 
 def _safe_json_loads(value):

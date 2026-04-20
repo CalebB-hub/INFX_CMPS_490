@@ -82,6 +82,21 @@ export default function LessonDetails() {
       .filter(Boolean)
   }, [lesson?.lessonMaterial])
 
+  const quizCompleteForLesson = useMemo(() => {
+    if (!lesson?.lessonId) return null
+    try {
+      const raw = localStorage.getItem("quizGrades")
+      const parsed = raw ? JSON.parse(raw) : {}
+      return Object.values(parsed).find(
+        (grade) => grade && grade.lessonId === lesson.lessonId
+      )
+    } catch (e) {
+      return null
+    }
+  }, [lesson?.lessonId])
+
+  const isPerfectQuiz = quizCompleteForLesson?.percent === 100
+
   return (
     <div>
       <TopNav />
@@ -114,6 +129,43 @@ export default function LessonDetails() {
             {lesson.score !== null && lesson.score !== undefined && (
               <div className="muted" style={{ marginTop: 12 }}>
                 Score: {lesson.score}
+              </div>
+            )}
+
+            {lesson.completedAt && isPerfectQuiz && (
+              <div style={{ marginTop: 16 }}>
+                <Link
+                  className="btn"
+                  to={`/test?lessonId=${lesson.lessonId}`}
+                  aria-label="Go to test"
+                >
+                  <span
+                    aria-hidden="true"
+                    style={{ display: "inline-flex", alignItems: "center", gap: 8 }}
+                  >
+                    <svg
+                      width="18"
+                      height="14"
+                      viewBox="0 0 18 14"
+                      fill="none"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        d="M1 2.5C1 1.67157 1.67157 1 2.5 1H15.5C16.3284 1 17 1.67157 17 2.5V11.5C17 12.3284 16.3284 13 15.5 13H2.5C1.67157 13 1 12.3284 1 11.5V2.5Z"
+                        stroke="currentColor"
+                        strokeWidth="1.5"
+                        strokeLinejoin="round"
+                      />
+                      <path
+                        d="M2 2.5L9 8L16 2.5"
+                        stroke="currentColor"
+                        strokeWidth="1.5"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                    <span>Go to test</span>
+                  </span>
+                </Link>
               </div>
             )}
           </div>

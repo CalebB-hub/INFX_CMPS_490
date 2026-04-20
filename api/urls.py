@@ -15,8 +15,8 @@ urlpatterns = [
     path('learning/modules', views.learning_modules, name='learning_modules'),
     path('learning/lessons', views.learning_lessons, name='learning_lessons'),
     path('learning/lessons/<int:lesson_id>', views.learning_lesson_detail, name='learning_lesson_detail'),
-    path('generate-content/', views.generate_content, name='generate_content'),
-    ##path('generate-content/', views.generate_content, name='generate_content'),
+    path('learning/tests', views.learning_tests, name='learning_tests'),
+    path('lessons/<int:lesson_id>', views.lesson_page_detail, name='lesson_page_detail'),
     path('quizzes/', views.quizzes, name='quizzes'),
     path('test/', views.test_post, name='test_post'),
 ]

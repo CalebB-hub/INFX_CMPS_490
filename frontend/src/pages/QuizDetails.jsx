@@ -47,6 +47,7 @@ export default function QuizDetails() {
     setFinalScore(score)
     setSubmitted(true)
     const payload = {
+      lessonId: quiz?.lessonId || null,
       score,
       total: totalQuestions,
       percent: totalQuestions > 0 ? Math.round((score / totalQuestions) * 100) : 0,
