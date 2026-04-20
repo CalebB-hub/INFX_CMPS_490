@@ -14,6 +14,7 @@ urlpatterns = [
     path('dashboard/me', views.dashboard_me, name='dashboard_me'),
     path('learning/lessons', views.learning_lessons, name='learning_lessons'),
     path('learning/lessons/<int:lesson_id>', views.learning_lesson_detail, name='learning_lesson_detail'),
+    path('learning/tests', views.learning_tests, name='learning_tests'),
     path('lessons/<int:lesson_id>', views.lesson_page_detail, name='lesson_page_detail'),
     path('generate-test-emails/', views.generate_test_emails, name='generate_test_emails'),
     path('quizzes/', views.quizzes, name='quizzes'),

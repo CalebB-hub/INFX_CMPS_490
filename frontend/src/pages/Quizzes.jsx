@@ -36,6 +36,21 @@ export default function Quizzes() {
     return map
   }, [quizzes])
 
+  const quizGradesByLessonId = useMemo(() => {
+    try {
+      const raw = localStorage.getItem("quizGrades")
+      const parsed = raw ? JSON.parse(raw) : {}
+      return Object.values(parsed).reduce((acc, grade) => {
+        if (grade?.lessonId) {
+          acc.set(grade.lessonId, grade)
+        }
+        return acc
+      }, new Map())
+    } catch (e) {
+      return new Map()
+    }
+  }, [])
+
   const lessonsByModule = useMemo(() => {
     const map = new Map()
     modules.forEach((m) => map.set(m.id, []))
@@ -75,6 +90,8 @@ export default function Quizzes() {
                     <div style={{ display: "grid", gap: 10 }}>
                       {moduleLessons.map((lesson) => {
                         const quiz = quizByLessonId.get(lesson.id)
+                        const quizGrade = quizGradesByLessonId.get(lesson.id)
+                        const showTestButton = Boolean(lesson.completedAt && quizGrade)
                         return (
                           <div
                             key={lesson.id}
@@ -87,9 +104,40 @@ export default function Quizzes() {
                               </div>
                             </div>
                             {quiz ? (
-                              <Link className="btn" to={`/learning/quizzes/${quiz.id}`}>
-                                Take quiz
-                              </Link>
+                              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                <Link className="btn" to={`/learning/quizzes/${quiz.id}`}>
+                                  Take quiz
+                                </Link>
+                                {showTestButton && (
+                                  <Link
+                                    className="btn topnav__profileBtn"
+                                    to={`/test?lessonId=${lesson.id}`}
+                                    aria-label="Go to test"
+                                    style={{ display: "inline-flex", alignItems: "center" }}
+                                  >
+                                    <svg
+                                      width="18"
+                                      height="14"
+                                      viewBox="0 0 18 14"
+                                      fill="none"
+                                      xmlns="http://www.w3.org/2000/svg"
+                                    >
+                                      <path
+                                        d="M1 2.5C1 1.67157 1.67157 1 2.5 1H15.5C16.3284 1 17 1.67157 17 2.5V11.5C17 12.3284 16.3284 13 15.5 13H2.5C1 13 1 12.3284 1 11.5V2.5Z"
+                                        stroke="currentColor"
+                                        strokeWidth="1.5"
+                                        strokeLinejoin="round"
+                                      />
+                                      <path
+                                        d="M2 2.5L9 8L16 2.5"
+                                        stroke="currentColor"
+                                        strokeWidth="1.5"
+                                        strokeLinejoin="round"
+                                      />
+                                    </svg>
+                                  </Link>
+                                )}
+                              </div>
                             ) : (
                               <span className="muted">Unavailable</span>
                             )}
