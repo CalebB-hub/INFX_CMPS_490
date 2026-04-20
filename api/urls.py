@@ -17,5 +17,6 @@ urlpatterns = [
     path('lessons/<int:lesson_id>', views.lesson_page_detail, name='lesson_page_detail'),
     path('generate-test-emails/', views.generate_test_emails, name='generate_test_emails'),
     path('quizzes/', views.quizzes, name='quizzes'),
+    path('quizzes/<int:quiz_id>', views.quiz_detail, name='quiz_detail'),
     path('test/', views.test_post, name='test_post'),
 ]
