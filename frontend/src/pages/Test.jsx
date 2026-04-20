@@ -10,7 +10,7 @@ const MOCK_TESTS = [
     title: "Payroll update request",
     description: JSON.stringify({
       lessonId: "1",
-      subject: "Action Required: Update Your Payroll Details",
+      subject: "Invoice past due - action needed",
       sender: "HR Support <hr-support@payroll-alerts.com>",
       body: [
         "Hello,",
@@ -193,6 +193,7 @@ export default function Test() {
   const [loadingTests, setLoadingTests] = useState(true)
   const [error, setError] = useState("")
   const [verdict, setVerdict] = useState("")
+  const [phishingReason, setPhishingReason] = useState("")
   const [submitted, setSubmitted] = useState(false)
   const [statusMessage, setStatusMessage] = useState("")
 
@@ -274,14 +275,42 @@ export default function Test() {
     }
   }, [activeTest, tests])
 
+  const phishingReasonOptions = [
+    "The message creates urgency and pushes you to act immediately.",
+    "The sender and link look suspicious and do not match a trusted company domain.",
+    "The email asks for sensitive account information through an untrusted link.",
+    "The message uses pressure to make you ignore normal verification steps.",
+    "All of the above are phishing red flags.",
+  ]
+
+  const canSubmit =
+    verdict === "Not phishing" || (verdict === "Phishing" && Boolean(phishingReason))
+
   function handleVerdictSelect(option) {
     if (!activeTest) {
       setStatusMessage("No test loaded.")
       return
     }
+    setVerdict(option)
+    setStatusMessage("")
+    if (option !== "Phishing") {
+      setPhishingReason("")
+    }
+  }
+
+  function handleSubmit() {
+    if (!activeTest) {
+      setStatusMessage("No test loaded.")
+      return
+    }
+    if (!canSubmit) {
+      setStatusMessage("Select an answer before submitting.")
+      return
+    }
+
     const questions = activeTest.questions || []
     const expected = String(questions[0]?.answer ?? "").toLowerCase()
-    const selected = option === "Phishfree" ? "not phishing" : option.toLowerCase()
+    const selected = verdict.toLowerCase()
     const isCorrect = expected ? expected === selected : false
     const correctCount = isCorrect ? 1 : 0
     const total = expected ? 1 : 0
@@ -291,6 +320,8 @@ export default function Test() {
       testId: activeTest.testId,
       lessonId: lessonIdParam,
       title: activeTest.title,
+      verdict,
+      phishingReason: verdict === "Phishing" ? phishingReason : "",
       score: correctCount,
       total,
       percent,
@@ -308,10 +339,9 @@ export default function Test() {
       // ignore storage errors
     }
 
-    setVerdict(option)
     setSubmitted(true)
     setStatusMessage("Responses saved.")
-    navigate("/grades")
+    navigate("/inbox")
   }
 
   return (
@@ -351,26 +381,68 @@ export default function Test() {
         <div className="card" style={{ marginTop: 16 }}>
           {!activeTest && <div className="muted">No questions available.</div>}
           {activeTest && !submitted && (
-            <div style={{ display: "flex", justifyContent: "center", gap: 16 }}>
-              {["Phishing", "Phishfree"].map((option) => {
-                const isSelected = verdict === option
-                return (
-                  <button
-                    key={option}
-                    type="button"
-                    className="btn topnav__profileBtn"
-                    disabled={submitted}
-                    onClick={() => handleVerdictSelect(option)}
-                    style={{
-                      minWidth: 140,
-                      justifyContent: "center",
-                      opacity: isSelected ? 1 : 0.85,
-                    }}
-                  >
-                    {option}
-                  </button>
-                )
-              })}
+            <div style={{ display: "grid", gap: 16 }}>
+              <div style={{ display: "flex", justifyContent: "flex-start", gap: 16, flexWrap: "wrap" }}>
+                {["Phishing", "Not phishing"].map((option) => {
+                  const isSelected = verdict === option
+                  return (
+                    <button
+                      key={option}
+                      type="button"
+                      className="btn topnav__profileBtn"
+                      disabled={submitted}
+                      onClick={() => handleVerdictSelect(option)}
+                      style={{
+                        minWidth: 140,
+                        justifyContent: "center",
+                        opacity: isSelected ? 1 : 0.85,
+                      }}
+                    >
+                      {option}
+                    </button>
+                  )
+                })}
+              </div>
+
+              {verdict === "Phishing" && (
+                <div style={{ display: "grid", gap: 12 }}>
+                  <div style={{ fontWeight: 600 }}>
+                    Why is this email phishing?
+                  </div>
+                  <div style={{ display: "grid", gap: 10 }}>
+                    {phishingReasonOptions.map((option) => (
+                      <label
+                        key={option}
+                        style={{ display: "flex", alignItems: "flex-start", gap: 10 }}
+                      >
+                        <input
+                          type="radio"
+                          name="phishing-reason"
+                          checked={phishingReason === option}
+                          onChange={() => setPhishingReason(option)}
+                        />
+                        <span>{option}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div style={{ display: "flex", justifyContent: "flex-start" }}>
+                <button
+                  type="button"
+                  className="btn"
+                  onClick={handleSubmit}
+                  disabled={!canSubmit}
+                  style={{
+                    minWidth: 140,
+                    opacity: canSubmit ? 1 : 0.5,
+                    cursor: canSubmit ? "pointer" : "not-allowed",
+                  }}
+                >
+                  Submit
+                </button>
+              </div>
             </div>
           )}
           {statusMessage && (

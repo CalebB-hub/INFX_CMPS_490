@@ -4,7 +4,6 @@ import { useNavigate } from "react-router-dom";
 import { getAccessToken, logout, refreshAccessToken } from "../services/authService";
 
 const API_BASE = "http://localhost:8000/api";
-
 async function requestDashboard(token) {
   const response = await fetch(`${API_BASE}/dashboard/me`, {
     headers: {
@@ -24,6 +23,30 @@ async function requestDashboard(token) {
 
   if (!response.ok) {
     throw new Error(data.error || data.detail || "Failed to load dashboard.");
+  }
+
+  return data;
+}
+
+async function requestLessons(token) {
+  const response = await fetch(`${API_BASE}/learning/lessons`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      Accept: "application/json",
+    },
+  });
+
+  const contentType = response.headers.get("content-type") || "";
+  const raw = await response.text();
+
+  if (!contentType.includes("application/json")) {
+    throw new Error("Lessons endpoint did not return JSON.");
+  }
+
+  const data = raw ? JSON.parse(raw) : {};
+
+  if (!response.ok) {
+    throw new Error(data.error || data.detail || "Failed to load lessons.");
   }
 
   return data;
@@ -55,6 +78,7 @@ async function fetchDashboard() {
 export default function Home() {
   const navigate = useNavigate();
   const [dashboard, setDashboard] = useState(null);
+  const [lessons, setLessons] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -63,10 +87,38 @@ export default function Home() {
 
     async function loadDashboard() {
       try {
-        const data = await fetchDashboard();
+        let token = getAccessToken();
+        if (!token) {
+          throw new Error("You are not logged in.");
+        }
+
+        let dashboardData;
+        let lessonsData;
+
+        try {
+          [dashboardData, lessonsData] = await Promise.all([
+            requestDashboard(token),
+            requestLessons(token),
+          ]);
+        } catch (err) {
+          if (
+            err.message === "Authentication credentials were not provided." ||
+            err.message.includes("Given token not valid") ||
+            err.message.includes("Token is invalid or expired")
+          ) {
+            token = await refreshAccessToken();
+            [dashboardData, lessonsData] = await Promise.all([
+              requestDashboard(token),
+              requestLessons(token),
+            ]);
+          } else {
+            throw err;
+          }
+        }
 
         if (mounted) {
-          setDashboard(data);
+          setDashboard(dashboardData);
+          setLessons(Array.isArray(lessonsData?.lessons) ? lessonsData.lessons : []);
           setError("");
         }
       } catch (err) {
@@ -91,37 +143,89 @@ export default function Home() {
     };
   }, [navigate]);
 
+  const completedLessonCount = (() => {
+    try {
+      const raw = localStorage.getItem("quizGrades");
+      const parsed = raw ? JSON.parse(raw) : {};
+      const completedLessonIds = new Set(
+        Object.values(parsed || {})
+          .map((grade) => grade?.lessonId)
+          .filter(Boolean)
+          .map((lessonId) => String(lessonId))
+      );
+      return completedLessonIds.size;
+    } catch {
+      return 0;
+    }
+  })();
+
+  const completedLessonIds = (() => {
+    try {
+      const raw = localStorage.getItem("quizGrades");
+      const parsed = raw ? JSON.parse(raw) : {};
+      return new Set(
+        Object.values(parsed || {})
+          .map((grade) => grade?.lessonId)
+          .filter(Boolean)
+          .map((lessonId) => String(lessonId))
+      );
+    } catch {
+      return new Set();
+    }
+  })();
+
+  const averageTestPercent = (() => {
+    try {
+      const raw = localStorage.getItem("testGrades");
+      const parsed = raw ? JSON.parse(raw) : {};
+      const percents = Object.values(parsed || {})
+        .map((grade) => Number(grade?.percent))
+        .filter((percent) => Number.isFinite(percent));
+
+      if (percents.length === 0) {
+        return 0;
+      }
+
+      return percents.reduce((sum, percent) => sum + percent, 0) / percents.length;
+    } catch {
+      return 0;
+    }
+  })();
+
+  const assignedLessonCount = lessons.length;
+
+  const simulationHistory = (() => {
+    try {
+      const raw = localStorage.getItem("testGrades");
+      const parsed = raw ? JSON.parse(raw) : {};
+
+      return Object.values(parsed || {})
+        .filter((grade) => grade && grade.title && grade.submittedAt)
+        .sort((a, b) => new Date(b.submittedAt) - new Date(a.submittedAt))
+        .map((grade) => ({
+          id: grade.testId || `${grade.title}-${grade.submittedAt}`,
+          subject: grade.title,
+          result: `${Math.round(Number(grade.percent) || 0)}%`,
+          date: new Date(grade.submittedAt).toLocaleDateString(),
+        }));
+    } catch {
+      return [];
+    }
+  })();
+
   const stats = {
-    phishingScore: Math.round(dashboard?.tests?.averageScore || 0),
-    lessonsCompleted: dashboard?.lessons?.totalCompleted || 0,
-    lessonsTotal:
-      (dashboard?.lessons?.totalCompleted || 0) +
-      (dashboard?.assignments?.totalPending || 0) +
-      (dashboard?.assignments?.totalOverdue || 0),
-    simulationsCompleted: dashboard?.tests?.totalCompleted || 0,
+    phishingScore: Math.round(averageTestPercent),
+    lessonsCompleted: completedLessonCount,
+    lessonsTotal: assignedLessonCount,
   };
 
-  const assignedLessons = [
-    ...(dashboard?.assignments?.pending || []).map((assignment) => ({
-      id: `pending-${assignment.assignmentId}`,
-      title: assignment.testTitle,
-      status: "Pending",
-    })),
-    ...(dashboard?.assignments?.overdue || []).map((assignment) => ({
-      id: `overdue-${assignment.assignmentId}`,
-      title: assignment.testTitle,
-      status: "Overdue",
-    })),
-  ];
-
-  const simulationHistory = (dashboard?.tests?.recentTests || []).map((test) => ({
-    id: test.testId,
-    subject: test.title,
-    result: `${Math.round(test.score)}%`,
-    date: new Date(test.dateTaken).toLocaleDateString(),
-  }));
-
-  const hasIncompleteTraining = stats.lessonsCompleted < stats.lessonsTotal;
+  const assignedLessons = lessons
+    .filter((lesson) => !completedLessonIds.has(String(lesson.lessonId)))
+    .map((lesson) => ({
+      id: `lesson-${lesson.lessonId}`,
+      title: lesson.title,
+      status: "Not completed",
+    }));
 
   return (
     <div>
@@ -145,10 +249,6 @@ export default function Home() {
             <p style={{ fontSize: 22, margin: 0 }}>
               {stats.lessonsCompleted} / {stats.lessonsTotal}
             </p>
-          </div>
-          <div className="card">
-            <p><b>Simulations Completed</b></p>
-            <p style={{ fontSize: 22, margin: 0 }}>{stats.simulationsCompleted}</p>
           </div>
         </div>
 
@@ -181,21 +281,6 @@ export default function Home() {
                 ))
               )}
             </div>
-          </div>
-        </section>
-
-        <section style={{ marginTop: 16 }}>
-          <div className="card">
-            <h3 style={{ marginTop: 0 }}>Recommended Actions</h3>
-            {hasIncompleteTraining ? (
-              <div className="alert alert--warning">
-                You still have unfinished training. Complete your remaining lessons to improve your phishing score.
-              </div>
-            ) : (
-              <div className="alert alert--success">
-                You're all caught up! Keep an eye out for new training assignments.
-              </div>
-            )}
           </div>
         </section>
 
