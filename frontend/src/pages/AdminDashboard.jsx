@@ -105,6 +105,7 @@ export default function AdminDashboard() {
                 border: "none", 
                 borderBottom: activeTab === tab ? "3px solid var(--accent)" : "3px solid transparent",
                 fontWeight: activeTab === tab ? "bold" : "normal",
+                color: "var(--text)",
                 cursor: "pointer",
                 textTransform: "capitalize"
               }}

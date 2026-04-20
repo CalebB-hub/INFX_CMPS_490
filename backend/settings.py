@@ -86,14 +86,23 @@ WSGI_APPLICATION = 'backend.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
-# Set USE_SQLITE=1 in .env to use SQLite (no PostgreSQL needed). Remove it to use PostgreSQL.
-DATABASES = {
-        'default': dj_database_url.config(
-         default=os.environ.get('postgresql://infx_490_db_gjyt_user:T57TDbhRR1tC8aOfWXn6N6yOA4TNjniE@dpg-d6s6fcp5pdvs73fga3qg-a.ohio-postgres.render.com/infx_490_db_gjyt')
-         )
-        }
-    
+# Development default is SQLite. Set USE_SQLITE=0 to use PostgreSQL.
+use_sqlite = os.getenv('USE_SQLITE', '1') == '1'
+database_url = os.getenv('DATABASE_URL')
 
+if use_sqlite:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
+    }
+else:
+    DATABASES = {
+        'default': dj_database_url.config(
+            default=database_url or 'postgresql://infx_490_db_gjyt_user:T57TDbhRR1tC8aOfWXn6N6yOA4TNjniE@dpg-d6s6fcp5pdvs73fga3qg-a.ohio-postgres.render.com/infx_490_db_gjyt'
+        )
+    }
 
 AUTH_USER_MODEL = 'api.User'
 
