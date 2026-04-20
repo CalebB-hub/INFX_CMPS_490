@@ -763,6 +763,41 @@ def quizzes(request):
     )
 
 
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def quiz_detail(request, quiz_id):
+    """
+    GET: return a single quiz template by ID.
+    """
+    quiz = get_object_or_404(Test, test_id=quiz_id, user_id__isnull=True)
+
+    meta = _safe_json_loads(quiz.description) or {}
+    lesson_id = meta.get('lessonId') if isinstance(meta, dict) else None
+
+    questions = Question.objects.filter(test_id=quiz).order_by('question_id')
+    question_payload = []
+    for q in questions:
+        options = _safe_json_loads(q.response)
+        question_payload.append(
+            {
+                'id': str(q.question_id),
+                'prompt': q.question_text,
+                'options': options if isinstance(options, list) else [],
+                'correctIndex': int(q.answer) if str(q.answer).isdigit() else None,
+            }
+        )
+
+    return Response(
+        {
+            'id': str(quiz.test_id),
+            'lessonId': lesson_id,
+            'title': quiz.title,
+            'questions': question_payload,
+        },
+        status=status.HTTP_200_OK,
+    )
+
+
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def test_post(request):
