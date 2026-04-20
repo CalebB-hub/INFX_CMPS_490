@@ -108,7 +108,21 @@ export default function Lessons() {
 
                   {moduleLessons.length > 0 && (
                     <div style={{ display: "grid", gap: 10 }}>
-                      {moduleLessons.map((lesson) => (
+                      {moduleLessons.map((lesson) => {
+                        let quizCompleteForLesson = null
+                        try {
+                          const raw = localStorage.getItem("quizGrades")
+                          const parsed = raw ? JSON.parse(raw) : {}
+                          quizCompleteForLesson = Object.values(parsed).find(
+                            (grade) => grade && grade.lessonId === lesson.lessonId
+                          )
+                        } catch (e) {
+                          quizCompleteForLesson = null
+                        }
+                        const showTestButton = Boolean(
+                          lesson.completedAt && quizCompleteForLesson
+                        )
+                        return (
                         <div
                           key={lesson.lessonId}
                           style={{ display: "flex", alignItems: "center", gap: 12 }}
@@ -121,11 +135,23 @@ export default function Lessons() {
                                 : "Not completed yet"}
                             </div>
                           </div>
-                          <Link className="btn" to={`/learning/lessons/${lesson.lessonId}`}>
-                            Open lesson
-                          </Link>
+                          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                            <Link className="btn" to={`/learning/lessons/${lesson.lessonId}`}>
+                              Open lesson
+                            </Link>
+                            {showTestButton && (
+                              <Link
+                                className="btn topnav__profileBtn"
+                                to={`/test?lessonId=${lesson.lessonId}`}
+                                aria-label="Go to test"
+                              >
+                                Take test
+                              </Link>
+                            )}
+                          </div>
                         </div>
-                      ))}
+                        )
+                      })}
                     </div>
                   )}
                 </div>

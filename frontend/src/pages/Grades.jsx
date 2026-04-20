@@ -57,6 +57,23 @@ export default function Grades() {
     return { taken, totalScore, totalPossible, percent }
   }, [quizzes, gradesByQuizId])
 
+  const testGrades = useMemo(() => {
+    try {
+      const raw = localStorage.getItem("testGrades")
+      return raw ? JSON.parse(raw) : {}
+    } catch (e) {
+      return {}
+    }
+  }, [])
+
+  const testGradeList = useMemo(
+    () =>
+      Object.values(testGrades).sort(
+        (a, b) => new Date(b.submittedAt || 0) - new Date(a.submittedAt || 0)
+      ),
+    [testGrades]
+  )
+
   return (
     <div>
       <TopNav />
@@ -69,6 +86,38 @@ export default function Grades() {
 
         {!loading && !error && (
           <div style={{ display: "grid", gap: 12 }}>
+            <div className="card">
+              <div style={{ fontWeight: 600, marginBottom: 6 }}>Test Grades</div>
+              {testGradeList.length === 0 ? (
+                <div className="muted">No test submissions yet.</div>
+              ) : (
+                testGradeList.map((grade) => (
+                  <div
+                    key={grade.testId}
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      padding: "8px 0",
+                      borderBottom: "1px solid rgba(0,0,0,0.08)",
+                    }}
+                  >
+                    <div>
+                      <div style={{ fontWeight: 600 }}>{grade.title || "Test"}</div>
+                      <div className="muted" style={{ marginTop: 2 }}>
+                        {grade.submittedAt
+                          ? new Date(grade.submittedAt).toLocaleDateString()
+                          : "Submission saved"}
+                      </div>
+                    </div>
+                    <div className="muted" style={{ minWidth: 120, textAlign: "right" }}>
+                      Score: {grade.score}/{grade.total} · {grade.percent}%
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+
             <div className="card">
               <div style={{ fontWeight: 600, marginBottom: 6 }}>Overall</div>
               <div className="muted">
