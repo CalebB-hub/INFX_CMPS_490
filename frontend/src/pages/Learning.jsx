@@ -43,7 +43,7 @@ async function fetchModules() {
 
   for (const base of API_BASES) {
     try {
-      const response = await fetchWithAuth(`${base}/learning/modules?scope=me`);
+      const response = await fetchWithAuth(`${base}/learning/lessons`);
 
       const raw = await response.text();
       const data = parseMaybeJson(raw);
@@ -54,16 +54,49 @@ async function fetchModules() {
       }
 
       if (!response.ok) {
-        throw new Error(data.error || "Failed to load modules");
+        throw new Error(data.error || "Failed to load lessons");
       }
 
-      return data.modules || [];
+      const lessons = Array.isArray(data.lessons) ? data.lessons : [];
+      const completedLessons = lessons.filter((lesson) => lesson.completedAt);
+      const scoredLessons = completedLessons.filter(
+        (lesson) => lesson.score !== null && lesson.score !== undefined,
+      );
+      const averageScore =
+        scoredLessons.length > 0
+          ? scoredLessons.reduce((sum, lesson) => sum + Number(lesson.score), 0) /
+            scoredLessons.length
+          : null;
+      const lastActivity = completedLessons.reduce((latest, lesson) => {
+        if (!lesson.completedAt) return latest;
+        if (!latest) return lesson.completedAt;
+        return new Date(lesson.completedAt) > new Date(latest) ? lesson.completedAt : latest;
+      }, null);
+
+      return [
+        {
+          moduleId: 1,
+          title: "Lessons",
+          description: "All phishing awareness lessons",
+          totalLessons: lessons.length,
+          progress: {
+            completedLessons: completedLessons.length,
+            totalLessons: lessons.length,
+            progressPercentage:
+              lessons.length > 0 ? (completedLessons.length / lessons.length) * 100 : 0,
+            averageScore,
+            lastActivity,
+          },
+          isStarted: completedLessons.length > 0,
+          isCompleted: lessons.length > 0 && completedLessons.length === lessons.length,
+        },
+      ];
     } catch (error) {
       lastError = error;
     }
   }
 
-  throw lastError || new Error("Failed to load modules");
+  throw lastError || new Error("Failed to load lessons");
 }
 
 export default function Learning() {
@@ -82,7 +115,7 @@ export default function Learning() {
         setModules(loadedModules);
       } catch (e) {
         if (!mounted) return;
-        setError(e.message || "Failed to load modules");
+        setError(e.message || "Failed to load lessons");
       } finally {
         if (mounted) {
           setLoading(false);
@@ -102,13 +135,13 @@ export default function Learning() {
       <main className="page">
         <h2>Assigned Lessons</h2>
 
-        {loading && <p className="muted">Loading modules...</p>}
+        {loading && <p className="muted">Loading lessons...</p>}
         {!loading && error && <div className="alert alert--error">{error}</div>}
 
         {!loading && !error && modules.length === 0 && (
           <div className="card">
             <p className="muted" style={{ margin: 0 }}>
-              No published learning modules were returned by the backend yet.
+              No lessons were returned by the backend yet.
             </p>
           </div>
         )}
