@@ -14,7 +14,7 @@ from django.utils import timezone
 import json
 from datetime import datetime, timezone as dt_timezone
 
-from .models import Role, Company, Assignment, Test, Lesson, Module, Question
+from .models import Role, Assignment, Test, Lesson, Module, Question
 
 User = get_user_model()
 
@@ -33,7 +33,7 @@ def hello_world(request):
 def signup(request):
     """
     User registration. No auth required.
-    Body: email, password, firstName, lastName, optional companyName.
+    Body: email, password, firstName, lastName.
     Returns 201 with id, email, message. Returns 409 if email exists.
     """
     # Parse and validate required fields
@@ -55,7 +55,6 @@ def signup(request):
     password = str(body['password'])
     first_name = str(body['firstName']).strip()
     last_name = str(body['lastName']).strip()
-    company_name = str(body.get('companyName', '')).strip()
 
     # Basic email format check
     if '@' not in email or '.' not in email.split('@')[-1]:
@@ -82,24 +81,11 @@ def signup(request):
             status=status.HTTP_400_BAD_REQUEST
         )
 
-    # Organization signups include companyName and get organization role + company.
-    is_organization_signup = bool(company_name)
-
-    if is_organization_signup:
-        user_role, _ = Role.objects.get_or_create(
-            role_name='Organization',
-            defaults={'description': 'Organization account', 'permissions': ''}
-        )
-        company, _ = Company.objects.get_or_create(
-            name=company_name,
-            defaults={'location': 'N/A'}
-        )
-    else:
-        user_role, _ = Role.objects.get_or_create(
-            role_name='User',
-            defaults={'description': 'Default user role', 'permissions': ''}
-        )
-        company = None
+    # Default role for new signups (required by User model)
+    default_role, _ = Role.objects.get_or_create(
+        role_name='User',
+        defaults={'description': 'Default user role', 'permissions': ''}
+    )
 
     # Create user (password is hashed by create_user)
     user = User.objects.create_user(
@@ -108,16 +94,14 @@ def signup(request):
         password=password,
         first_name=first_name,
         last_name=last_name,
-        role=user_role,
-        company=company,
+        role=default_role,
+        company=None,
     )
 
     return Response(
         {
             'id': user.user_id,
             'email': user.email,
-            'company': user.company.name if user.company else None,
-            'role': user.role.role_name if user.role else None,
             'message': 'User created successfully',
         },
         status=status.HTTP_201_CREATED,
@@ -323,7 +307,6 @@ def me(request):
             'email': user.email,
             'firstName': user.first_name,
             'lastName': user.last_name,
-            'company': user.company.name if user.company else None,
             'role': user.role.role_name if user.role else None,
         },
         status=status.HTTP_200_OK,

@@ -1,9 +1,8 @@
 import { NavLink, useNavigate } from "react-router-dom";
 import { useEffect, useRef, useState } from "react";
-import { getAccessToken, getUser, refreshAccessToken, logout } from "../services/authService";
+import { getAccessToken, getUser, refreshAccessToken } from "../services/authService";
 import PhishFreeLogoText from "../Logos/Phish Free Logo Text.png";
 
-const API_BASE = "http://localhost:8000/api";
 const API_BASES = ["http://localhost:8000/api", "/api"];
 
 export default function TopNav() {
@@ -27,32 +26,6 @@ export default function TopNav() {
   function goToSettings() {
     setProfileOpen(false);
     navigate("/settings");
-  }
-
-  async function handleLogout() {
-    setProfileOpen(false);
-
-    const token = localStorage.getItem("pf_auth_token");
-    const refreshToken = localStorage.getItem("pf_refresh_token");
-
-    if (token && refreshToken) {
-      try {
-        await fetch(`${API_BASE}/auth/logout/`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({ refreshToken }),
-        });
-      } catch {
-        // Always proceed with local logout even if backend call fails.
-      }
-    }
-
-    localStorage.removeItem("pf_refresh_token");
-    logout();
-    navigate("/login", { replace: true });
   }
 
   // close dropdown on outside click + Escape
@@ -268,9 +241,6 @@ export default function TopNav() {
 
           {profileOpen && (
             <div className="topnav__dropdown" role="menu">
-              <button className="topnav__dropdownItem" role="menuitem" onClick={handleLogout}>
-                Logout
-              </button>
               <button className="topnav__dropdownItem" role="menuitem" onClick={goToProfile}>
                 My Profile
               </button>
