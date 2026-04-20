@@ -29,10 +29,12 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-+7xl#hxg0%ayk#b5#cm&lhc+d*wnfirzx*hq)95sz7xqt2&nsg'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.getenv('DEBUG', 'True').lower() == 'true'
 
-ALLOWED_HOSTS = ['infx-cmps-490-1.onrender.com',
-'localhost']
+ALLOWED_HOSTS = os.getenv(
+    'ALLOWED_HOSTS',
+    'localhost,127.0.0.1,mysite.onrender.com,infx-cmps-490.onrender.com',
+).split(',')
 
 
 # Application definition
@@ -86,23 +88,18 @@ WSGI_APPLICATION = 'backend.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
-# Development default is SQLite. Set USE_SQLITE=0 to use PostgreSQL.
-use_sqlite = os.getenv('USE_SQLITE', '1') == '1'
-database_url = os.getenv('DATABASE_URL')
+# Prefer `DATABASE_URL` when provided, but default to the Render PostgreSQL database
+# so every API endpoint uses the new database by default.
+DATABASE_URL = os.getenv(
+    'DATABASE_URL',
+    'postgresql://infx_490_db_gjyt_user:T57TDbhRR1tC8aOfWXn6N6yOA4TNjniE@dpg-d6s6fcp5pdvs73fga3qg-a.ohio-postgres.render.com/infx_490_db_gjyt',
+)
 
-if use_sqlite:
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': BASE_DIR / 'db.sqlite3',
-        }
-    }
-else:
-    DATABASES = {
-        'default': dj_database_url.config(
-            default=database_url or 'postgresql://infx_490_db_gjyt_user:T57TDbhRR1tC8aOfWXn6N6yOA4TNjniE@dpg-d6s6fcp5pdvs73fga3qg-a.ohio-postgres.render.com/infx_490_db_gjyt'
-        )
-    }
+DATABASES = {
+    'default': dj_database_url.config(default=DATABASE_URL)
+}
+    
+
 
 AUTH_USER_MODEL = 'api.User'
 
@@ -166,10 +163,26 @@ if not DEBUG:
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # CORS settings
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:5173",  # Vite default dev server
-    "http://127.0.0.1:5173",
-]
+CORS_ALLOWED_ORIGINS = os.getenv(
+    'CORS_ALLOWED_ORIGINS',
+    'http://localhost:5173,http://127.0.0.1:5173,https://mysite.onrender.com,https://infx-cmps-490.onrender.com',
+).split(',')
+
+CORS_ALLOWED_ORIGINS = [origin.strip() for origin in CORS_ALLOWED_ORIGINS if origin.strip()]
+
+CORS_ALLOWED_ORIGIN_REGEXES = os.getenv(
+    'CORS_ALLOWED_ORIGIN_REGEXES',
+    r'^https://.*\.onrender\.com$',
+).split(',')
+
+CORS_ALLOWED_ORIGIN_REGEXES = [pattern.strip() for pattern in CORS_ALLOWED_ORIGIN_REGEXES if pattern.strip()]
+
+CSRF_TRUSTED_ORIGINS = os.getenv(
+    'CSRF_TRUSTED_ORIGINS',
+    'https://mysite.onrender.com,https://infx-cmps-490.onrender.com',
+).split(',')
+
+CSRF_TRUSTED_ORIGINS = [origin.strip() for origin in CSRF_TRUSTED_ORIGINS if origin.strip()]
 
 # REST Framework settings
 REST_FRAMEWORK = {
