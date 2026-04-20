@@ -584,6 +584,47 @@ def lesson_page_detail(request, lesson_id):
     )
 
 
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def learning_tests(request):
+    """
+    Returns tests with email content and multiple-choice questions
+    for the current user.
+    """
+    tests = Test.objects.filter(user_id=request.user).order_by('-date_taken')
+    payload = []
+
+    for test in tests:
+        questions = Question.objects.filter(test_id=test).order_by('question_id')
+        questions_payload = [
+            {
+                'questionId': q.question_id,
+                'questionText': q.question_text,
+                'answer': q.answer,
+            }
+            for q in questions
+        ]
+
+        payload.append(
+            {
+                'testId': test.test_id,
+                'title': test.title,
+                'description': test.description,
+                'dateTaken': test.date_taken.isoformat() if test.date_taken else None,
+                'score': float(test.score) if test.score is not None else None,
+                'questions': questions_payload,
+            }
+        )
+
+    return Response(
+        {
+            'tests': payload,
+            'totalTests': len(payload),
+        },
+        status=status.HTTP_200_OK,
+    )
+
+
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def generate_test_emails(request):

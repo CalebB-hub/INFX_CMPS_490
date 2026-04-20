@@ -116,6 +116,12 @@ export default function LessonDetails() {
                 Score: {lesson.score}
               </div>
             )}
+
+            <div style={{ marginTop: 16 }}>
+              <Link className="btn" to={`/test?lessonId=${lesson.lessonId}`}>
+                Go to test
+              </Link>
+            </div>
           </div>
         )}
       </main>
