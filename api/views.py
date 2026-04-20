@@ -14,7 +14,7 @@ from django.utils import timezone
 import json
 from datetime import datetime, timezone as dt_timezone
 
-from .models import Role, Company, Assignment, Test, Lesson, Module, Question
+from .models import Role, Company, Assignment, Test, Lesson, Question, LessonScore
 from .services.ai_services import _generate_emails, _clean_response
 
 User = get_user_model()
@@ -504,108 +504,27 @@ def dashboard_me(request):
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
-def learning_modules(request):
-    """
-    Returns learning modules based on the scope parameter.
-    
-    Query Parameters:
-    - scope: Defines which modules to return
-      - 'me': Returns modules with user's progress (completed lessons, scores)
-      - 'all': Returns all published modules (default)
-    
-    Returns list of modules with:
-    - Module details (id, title, description, difficulty, duration)
-    - Lesson count
-    - For scope=me: user's progress, completed lessons, average score
-    """
-    scope = request.query_params.get('scope', 'all')
-    user = request.user
-    
-    # Get all published modules
-    modules = Module.objects.filter(is_published=True).order_by('created_at')
-    
-    modules_list = []
-    
-    for module in modules:
-        # Get all lessons in this module
-        module_lessons = Lesson.objects.filter(module=module)
-        total_lessons = module_lessons.count()
-        
-        module_data = {
-            'moduleId': module.module_id,
-            'title': module.title,
-            'description': module.description,
-            'difficultyLevel': module.difficulty_level,
-            'estimatedDuration': module.estimated_duration,
-            'totalLessons': total_lessons,
-        }
-        
-        if scope == 'me':
-            # Get user's lessons for this module
-            user_lessons = module_lessons.filter(user_id=user)
-            completed_lessons = user_lessons.filter(completed_at__isnull=False)
-            
-            # Calculate progress
-            completed_count = completed_lessons.count()
-            progress_percentage = (completed_count / total_lessons * 100) if total_lessons > 0 else 0
-            
-            # Calculate average score for completed lessons
-            avg_score = completed_lessons.aggregate(avg=Avg('score'))['avg']
-            
-            # Get recent activity
-            last_activity = user_lessons.order_by('-completed_at').first()
-            
-            module_data.update({
-                'progress': {
-                    'completedLessons': completed_count,
-                    'totalLessons': total_lessons,
-                    'progressPercentage': round(progress_percentage, 2),
-                    'averageScore': float(avg_score) if avg_score else None,
-                    'lastActivity': last_activity.completed_at.isoformat() if last_activity and last_activity.completed_at else None,
-                },
-                'isStarted': user_lessons.exists(),
-                'isCompleted': completed_count == total_lessons and total_lessons > 0,
-            })
-        
-        modules_list.append(module_data)
-    
-    return Response(
-        {
-            'modules': modules_list,
-            'totalModules': len(modules_list),
-            'scope': scope,
-        },
-        status=status.HTTP_200_OK,
-    )
-
-
-@api_view(['GET'])
-@permission_classes([IsAuthenticated])
 def learning_lessons(request):
     """
-    Returns lessons for the current user.
-    
-    Query Parameters:
-    - moduleId: Optional module filter
+    Returns all lessons along with the authenticated user's lesson progress.
     """
-    module_id = request.query_params.get('moduleId')
-    lessons_query = Lesson.objects.filter(user_id=request.user).select_related('module')
-
-    if module_id:
-        lessons_query = lessons_query.filter(module__module_id=module_id)
-
-    lessons_query = lessons_query.order_by('lesson_id')
+    lessons_query = Lesson.objects.all().order_by('lesson_id')
+    score_map = {
+        score.lesson_id: score
+        for score in LessonScore.objects.filter(user=request.user, lesson__in=lessons_query)
+    }
     lessons_list = []
 
     for lesson in lessons_query:
+        lesson_score = score_map.get(lesson.lesson_id)
         lessons_list.append({
             'lessonId': lesson.lesson_id,
-            'moduleId': lesson.module.module_id if lesson.module else None,
-            'moduleTitle': lesson.module.title if lesson.module else None,
+            'moduleId': 1,
+            'moduleTitle': 'Lessons',
             'title': lesson.title,
             'lessonMaterial': lesson.lesson_material,
-            'score': float(lesson.score) if lesson.score is not None else None,
-            'completedAt': lesson.completed_at.isoformat() if lesson.completed_at else None,
+            'score': float(lesson_score.score) if lesson_score else None,
+            'completedAt': lesson_score.updated_at.isoformat() if lesson_score else None,
         })
 
     return Response(
@@ -621,20 +540,21 @@ def learning_lessons(request):
 @permission_classes([IsAuthenticated])
 def learning_lesson_detail(request, lesson_id):
     """
-    Returns a single lesson for the current user.
+    Returns a single lesson plus the authenticated user's lesson progress.
     """
-    lesson = get_object_or_404(Lesson, lesson_id=lesson_id, user_id=request.user)
+    lesson = get_object_or_404(Lesson, lesson_id=lesson_id)
+    lesson_score = LessonScore.objects.filter(user=request.user, lesson=lesson).first()
 
     return Response(
         {
             'lessonId': lesson.lesson_id,
-            'moduleId': lesson.module.module_id if lesson.module else None,
-            'moduleTitle': lesson.module.title if lesson.module else None,
+            'moduleId': 1,
+            'moduleTitle': 'Lessons',
             'title': lesson.title,
             'lessonMaterial': lesson.lesson_material,
             'questions': lesson.questions,
-            'score': float(lesson.score) if lesson.score is not None else None,
-            'completedAt': lesson.completed_at.isoformat() if lesson.completed_at else None,
+            'score': float(lesson_score.score) if lesson_score else None,
+            'completedAt': lesson_score.updated_at.isoformat() if lesson_score else None,
         },
         status=status.HTTP_200_OK,
     )
@@ -646,22 +566,19 @@ def lesson_page_detail(request, lesson_id):
     """
     Dedicated endpoint for the Lessons page to fetch a single lesson.
     """
-    lesson = get_object_or_404(
-        Lesson.objects.select_related('module'),
-        lesson_id=lesson_id,
-        user_id=request.user,
-    )
+    lesson = get_object_or_404(Lesson, lesson_id=lesson_id)
+    lesson_score = LessonScore.objects.filter(user=request.user, lesson=lesson).first()
 
     return Response(
         {
             'lessonId': lesson.lesson_id,
-            'moduleId': lesson.module.module_id if lesson.module else None,
-            'moduleTitle': lesson.module.title if lesson.module else None,
+            'moduleId': 1,
+            'moduleTitle': 'Lessons',
             'title': lesson.title,
             'lessonMaterial': lesson.lesson_material,
             'questions': lesson.questions,
-            'score': float(lesson.score) if lesson.score is not None else None,
-            'completedAt': lesson.completed_at.isoformat() if lesson.completed_at else None,
+            'score': float(lesson_score.score) if lesson_score else None,
+            'completedAt': lesson_score.updated_at.isoformat() if lesson_score else None,
         },
         status=status.HTTP_200_OK,
     )
