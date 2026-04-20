@@ -1,0 +1,128 @@
+import { useEffect, useMemo, useState } from "react"
+import { Link } from "react-router-dom"
+import TopNav from "../components/TopNav"
+import { getAccessToken, refreshAccessToken } from "../services/authService"
+import { API_BASE } from "../services/apiConfig"
+
+async function fetchWithAuth(url) {
+  const token = getAccessToken()
+  if (!token) {
+    throw new Error("You are not logged in.")
+  }
+
+  const response = await fetch(url, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  })
+
+  if (response.status !== 401) {
+    return response
+  }
+
+  const refreshedToken = await refreshAccessToken()
+  return fetch(url, {
+    headers: {
+      Authorization: `Bearer ${refreshedToken}`,
+    },
+  })
+}
+
+async function fetchLessons() {
+  const response = await fetchWithAuth(`${API_BASE}/learning/lessons`)
+
+  const raw = await response.text()
+  const data = raw ? JSON.parse(raw) : {}
+
+  if (!response.ok) {
+    throw new Error(data.error || "Failed to load lessons")
+  }
+
+  return data.lessons || []
+}
+
+export default function Lessons() {
+  const [lessons, setLessons] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState("")
+
+  useEffect(() => {
+    let mounted = true
+    setLoading(true)
+    setError("")
+    fetchLessons()
+      .then((lessonsData) => {
+        if (!mounted) return
+        setLessons(lessonsData)
+      })
+      .catch((e) => setError(e.message || "Failed to load lessons"))
+      .finally(() => setLoading(false))
+    return () => {
+      mounted = false
+    }
+  }, [])
+
+  const lessonsByModule = useMemo(() => {
+    const map = new Map()
+    lessons.forEach((lesson) => {
+      const key = lesson.moduleId ?? "unassigned"
+      if (!map.has(key)) map.set(key, { title: lesson.moduleTitle, lessons: [] })
+      map.get(key).lessons.push(lesson)
+    })
+    return map
+  }, [lessons])
+
+  return (
+    <div>
+      <TopNav />
+      <main className="page">
+        <h2>Lessons</h2>
+        <p className="muted">Browse lessons and open details.</p>
+
+        {loading && <p className="muted">Loading lessons…</p>}
+        {error && <p className="muted">{error}</p>}
+
+        {!loading && !error && (
+          <div style={{ display: "grid", gap: 12 }}>
+            {Array.from(lessonsByModule.entries()).map(([moduleId, group]) => {
+              const moduleLessons = group.lessons || []
+              const moduleTitle = group.title || "Module"
+              return (
+                <div className="card" key={moduleId}>
+                  <h3 style={{ marginTop: 0 }}>{moduleTitle}</h3>
+
+                  {moduleLessons.length === 0 && (
+                    <div className="muted">No lessons yet</div>
+                  )}
+
+                  {moduleLessons.length > 0 && (
+                    <div style={{ display: "grid", gap: 10 }}>
+                      {moduleLessons.map((lesson) => (
+                        <div
+                          key={lesson.lessonId}
+                          style={{ display: "flex", alignItems: "center", gap: 12 }}
+                        >
+                          <div style={{ flex: 1 }}>
+                            <div style={{ fontWeight: 600 }}>{lesson.title}</div>
+                            <div className="muted" style={{ marginTop: 4 }}>
+                              {lesson.completedAt
+                                ? `Completed · Score ${lesson.score ?? "N/A"}`
+                                : "Not completed yet"}
+                            </div>
+                          </div>
+                          <Link className="btn" to={`/learning/lessons/${lesson.lessonId}`}>
+                            Open lesson
+                          </Link>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </main>
+    </div>
+  )
+}
