@@ -1,9 +1,7 @@
 import { Routes, Route, Navigate } from "react-router-dom";
 // Imports must point to the 'pages' folder
 import Login from "./pages/Login";
-import SignupRole from "./pages/SignupRole";
 import SignupIndividual from "./pages/SignupIndividual";
-import SignupCompany from "./pages/SignupCompany";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import Home from "./pages/Home";
@@ -28,9 +26,9 @@ export default function App() {
     <Routes>
       {/* Public Routes */}
       <Route path="/login" element={<Login />} />
-      <Route path="/signup" element={<SignupRole />} />
+      <Route path="/signup" element={<SignupIndividual />} />
       <Route path="/signup/individual" element={<SignupIndividual />} />
-      <Route path="/signup/company" element={<SignupCompany />} />
+      <Route path="/signup/company" element={<Navigate to="/signup/individual" replace />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password" element={<ResetPassword />} />
       <Route path="/inbox" element={<Inbox />} />

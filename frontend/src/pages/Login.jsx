@@ -94,7 +94,7 @@ export default function Login() {
             }}
           />
           <h1 style={{ fontWeight: "800", fontSize: "1.8rem", margin: "0" }}>
-            Sign in
+            Login
           </h1>
           <p className="muted" style={{ margin: "4px 0 0 0", fontSize: "14px" }}>
             Securely access your training dashboard.
