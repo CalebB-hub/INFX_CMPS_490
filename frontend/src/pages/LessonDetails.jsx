@@ -99,10 +99,6 @@ export default function LessonDetails() {
           <div className="card">
             <h2 style={{ marginTop: 0 }}>{lesson.title}</h2>
 
-            <div className="muted" style={{ marginBottom: 12 }}>
-              Lesson ID: {lesson.lessonId}
-            </div>
-
             <div style={{ display: "grid", gap: 8 }}>
               {paragraphs.map((p, idx) => (
                 <p key={idx} style={{ margin: 0 }}>
@@ -118,8 +114,8 @@ export default function LessonDetails() {
             )}
 
             <div style={{ marginTop: 16 }}>
-              <Link className="btn" to={`/test?lessonId=${lesson.lessonId}`}>
-                Go to test
+              <Link className="btn" to={`/learning/quizzes/q1?lessonId=${lesson.lessonId}`}>
+                Take Quiz
               </Link>
             </div>
           </div>

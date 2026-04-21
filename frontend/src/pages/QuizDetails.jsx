@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react"
-import { Link, useParams } from "react-router-dom"
+import { Link, useParams, useSearchParams } from "react-router-dom"
 import TopNav from "../components/TopNav"
 import { mockGetQuizById } from "../mock/mockApi"
 
 export default function QuizDetails() {
   const { quizId } = useParams()
+  const [searchParams] = useSearchParams()
+  const lessonId = searchParams.get("lessonId")
   const [quiz, setQuiz] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
@@ -51,6 +53,8 @@ export default function QuizDetails() {
       total: totalQuestions,
       percent: totalQuestions > 0 ? Math.round((score / totalQuestions) * 100) : 0,
       submittedAt: new Date().toISOString(),
+      lessonId,
+      quizId,
     }
     try {
       const raw = localStorage.getItem("quizGrades")

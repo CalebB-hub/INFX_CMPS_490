@@ -90,71 +90,92 @@ export default function Lessons() {
         <h2>Lessons</h2>
         <p className="muted">Browse lessons and open details.</p>
 
-        {loading && <p className="muted">Loading lessons…</p>}
+        {loading && <p className="muted">Loading lessons...</p>}
         {error && <p className="muted">{error}</p>}
 
         {!loading && !error && (
-          <div style={{ display: "grid", gap: 12 }}>
+          <div style={{ display: "grid", gap: 16 }}>
             {Array.from(lessonsByModule.entries()).map(([moduleId, group]) => {
               const moduleLessons = group.lessons || []
               const moduleTitle = group.title || "Module"
               return (
-                <div className="card" key={moduleId}>
-                  <h3 style={{ marginTop: 0 }}>{moduleTitle}</h3>
+                <section key={moduleId} style={{ display: "grid", gap: 12 }}>
+                  <h3 style={{ margin: 0 }}>{moduleTitle}</h3>
 
                   {moduleLessons.length === 0 && (
-                    <div className="muted">No lessons yet</div>
+                    <div className="card">
+                      <div className="muted">No lessons yet</div>
+                    </div>
                   )}
 
                   {moduleLessons.length > 0 && (
-                    <div style={{ display: "grid", gap: 10 }}>
+                    <div style={{ display: "grid", gap: 12 }}>
                       {moduleLessons.map((lesson) => {
                         let quizCompleteForLesson = null
                         try {
                           const raw = localStorage.getItem("quizGrades")
                           const parsed = raw ? JSON.parse(raw) : {}
                           quizCompleteForLesson = Object.values(parsed).find(
-                            (grade) => grade && grade.lessonId === lesson.lessonId
+                            (grade) =>
+                              grade &&
+                              String(grade.lessonId) === String(lesson.lessonId)
                           )
                         } catch (e) {
                           quizCompleteForLesson = null
                         }
-                        const showTestButton = Boolean(
-                          lesson.completedAt && quizCompleteForLesson
+                        const passedQuizForLesson = Boolean(
+                          quizCompleteForLesson &&
+                            Number(quizCompleteForLesson.percent) > 70
                         )
+
                         return (
-                        <div
-                          key={lesson.lessonId}
-                          style={{ display: "flex", alignItems: "center", gap: 12 }}
-                        >
-                          <div style={{ flex: 1 }}>
-                            <div style={{ fontWeight: 600 }}>{lesson.title}</div>
-                            <div className="muted" style={{ marginTop: 4 }}>
-                              {lesson.completedAt
-                                ? `Completed · Score ${lesson.score ?? "N/A"}`
-                                : "Not completed yet"}
+                          <div className="card" key={lesson.lessonId}>
+                            <div
+                              style={{
+                                display: "flex",
+                                justifyContent: "space-between",
+                                alignItems: "center",
+                                gap: 12,
+                              }}
+                            >
+                              <div style={{ flex: 1, minWidth: 0 }}>
+                                <div style={{ fontWeight: 600 }}>{lesson.title}</div>
+                                <div className="muted" style={{ marginTop: 4 }}>
+                                  {lesson.completedAt
+                                    ? `Completed · Score ${lesson.score ?? "N/A"}`
+                                    : "Not completed yet"}
+                                </div>
+                              </div>
+
+                              <div
+                                style={{
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "flex-end",
+                                  gap: 8,
+                                  flexWrap: "wrap",
+                                }}
+                              >
+                                {passedQuizForLesson && (
+                                  <Link
+                                    className="btn topnav__profileBtn"
+                                    to="/inbox"
+                                    aria-label="Go to inbox"
+                                  >
+                                    Take test
+                                  </Link>
+                                )}
+                                <Link className="btn" to={`/learning/lessons/${lesson.lessonId}`}>
+                                  Open lesson
+                                </Link>
+                              </div>
                             </div>
                           </div>
-                          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                            <Link className="btn" to={`/learning/lessons/${lesson.lessonId}`}>
-                              Open lesson
-                            </Link>
-                            {showTestButton && (
-                              <Link
-                                className="btn topnav__profileBtn"
-                                to={`/test?lessonId=${lesson.lessonId}`}
-                                aria-label="Go to test"
-                              >
-                                Take test
-                              </Link>
-                            )}
-                          </div>
-                        </div>
                         )
                       })}
                     </div>
                   )}
-                </div>
+                </section>
               )
             })}
           </div>
