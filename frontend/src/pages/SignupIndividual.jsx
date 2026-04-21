@@ -137,7 +137,7 @@ export default function SignupIndividual() {
           <p style={{ fontSize: "14px", marginBottom: "12px" }}>
             Have an account?{" "}
             <Link to="/login" style={{ color: "var(--accent)", fontWeight: "bold" }}>
-              Login here
+              Login Here
             </Link>
           </p>
         </footer>

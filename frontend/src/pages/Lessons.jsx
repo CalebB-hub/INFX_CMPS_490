@@ -4,6 +4,12 @@ import TopNav from "../components/TopNav"
 import { getAccessToken, refreshAccessToken } from "../services/authService"
 
 const API_BASES = ["http://localhost:8000/api", "/api"]
+const TEST_ID_BY_LESSON_ID = {
+  1: "mock-1",
+  2: "mock-2",
+  3: "mock-3",
+  4: "mock-4",
+}
 
 async function fetchWithAuth(url) {
   const token = getAccessToken()
@@ -87,7 +93,7 @@ export default function Lessons() {
     <div>
       <TopNav />
       <main className="page">
-        <h2>Lessons</h2>
+        <h2>Learning</h2>
         <p className="muted">Browse lessons and open details.</p>
 
         {loading && <p className="muted">Loading lessons...</p>}
@@ -112,6 +118,8 @@ export default function Lessons() {
                     <div style={{ display: "grid", gap: 12 }}>
                       {moduleLessons.map((lesson) => {
                         let quizCompleteForLesson = null
+                        let testGradeForLesson = null
+
                         try {
                           const raw = localStorage.getItem("quizGrades")
                           const parsed = raw ? JSON.parse(raw) : {}
@@ -123,9 +131,23 @@ export default function Lessons() {
                         } catch (e) {
                           quizCompleteForLesson = null
                         }
+
+                        try {
+                          const raw = localStorage.getItem("testGrades")
+                          const parsed = raw ? JSON.parse(raw) : {}
+                          testGradeForLesson =
+                            parsed[TEST_ID_BY_LESSON_ID[String(lesson.lessonId)]]
+                        } catch (e) {
+                          testGradeForLesson = null
+                        }
+
                         const passedQuizForLesson = Boolean(
                           quizCompleteForLesson &&
                             Number(quizCompleteForLesson.percent) > 70
+                        )
+                        const passedTestForLesson = Boolean(
+                          testGradeForLesson &&
+                            Number(testGradeForLesson.percent) > 70
                         )
 
                         return (
@@ -141,9 +163,7 @@ export default function Lessons() {
                               <div style={{ flex: 1, minWidth: 0 }}>
                                 <div style={{ fontWeight: 600 }}>{lesson.title}</div>
                                 <div className="muted" style={{ marginTop: 4 }}>
-                                  {lesson.completedAt
-                                    ? `Completed · Score ${lesson.score ?? "N/A"}`
-                                    : "Not completed yet"}
+                                  {passedTestForLesson ? "Complete" : "Not Complete"}
                                 </div>
                               </div>
 
@@ -156,18 +176,18 @@ export default function Lessons() {
                                   flexWrap: "wrap",
                                 }}
                               >
+                                <Link className="btn" to={`/learning/lessons/${lesson.lessonId}`}>
+                                  Open Lesson
+                                </Link>
                                 {passedQuizForLesson && (
                                   <Link
                                     className="btn topnav__profileBtn"
                                     to="/inbox"
                                     aria-label="Go to inbox"
                                   >
-                                    Take test
+                                    Take Test
                                   </Link>
                                 )}
-                                <Link className="btn" to={`/learning/lessons/${lesson.lessonId}`}>
-                                  Open lesson
-                                </Link>
                               </div>
                             </div>
                           </div>

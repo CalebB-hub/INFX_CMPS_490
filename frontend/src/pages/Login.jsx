@@ -120,7 +120,7 @@ export default function Login() {
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <span>Password</span>
               <Link to="/forgot-password" style={{ fontSize: "0.85rem", color: "var(--accent)" }}>
-                Forgot password?
+                Forgot Password?
               </Link>
             </div>
             <div style={{ position: "relative" }}>
@@ -155,7 +155,7 @@ export default function Login() {
           <p style={{ fontSize: "14px", marginBottom: "12px" }}>
             Don't have an account?{" "}
             <Link to="/signup" style={{ color: "var(--accent)", fontWeight: "bold" }}>
-              Sign up here
+              Sign Up Here
             </Link>
           </p>
         </footer>

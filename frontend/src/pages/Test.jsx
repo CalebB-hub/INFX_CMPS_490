@@ -284,7 +284,7 @@ export default function Test() {
   ]
 
   const canSubmit =
-    verdict === "Not phishing" || (verdict === "Phishing" && Boolean(phishingReason))
+    verdict === "Not Phishing" || (verdict === "Phishing" && Boolean(phishingReason))
 
   function handleVerdictSelect(option) {
     if (!activeTest) {
@@ -383,7 +383,7 @@ export default function Test() {
           {activeTest && !submitted && (
             <div style={{ display: "grid", gap: 16 }}>
               <div style={{ display: "flex", justifyContent: "flex-start", gap: 16, flexWrap: "wrap" }}>
-                {["Phishing", "Not phishing"].map((option) => {
+                {["Phishing", "Not Phishing"].map((option) => {
                   const isSelected = verdict === option
                   return (
                     <button

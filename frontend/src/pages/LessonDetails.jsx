@@ -88,7 +88,7 @@ export default function LessonDetails() {
       <main className="page">
         <div style={{ marginBottom: 20 }}>
           <Link className="btn" to="/learning">
-            ← Back to Learning
+            ← Back To Learning
           </Link>
         </div>
 
@@ -96,29 +96,31 @@ export default function LessonDetails() {
         {error && <p className="muted">{error}</p>}
 
         {!loading && !error && lesson && (
-          <div className="card">
-            <h2 style={{ marginTop: 0 }}>{lesson.title}</h2>
+          <>
+            <div className="card">
+              <h2 style={{ marginTop: 0 }}>{lesson.title}</h2>
 
-            <div style={{ display: "grid", gap: 8 }}>
-              {paragraphs.map((p, idx) => (
-                <p key={idx} style={{ margin: 0 }}>
-                  {p}
-                </p>
-              ))}
+              <div style={{ display: "grid", gap: 8 }}>
+                {paragraphs.map((p, idx) => (
+                  <p key={idx} style={{ margin: 0 }}>
+                    {p}
+                  </p>
+                ))}
+              </div>
+
+              {lesson.score !== null && lesson.score !== undefined && (
+                <div className="muted" style={{ marginTop: 12 }}>
+                  Score: {lesson.score}
+                </div>
+              )}
             </div>
 
-            {lesson.score !== null && lesson.score !== undefined && (
-              <div className="muted" style={{ marginTop: 12 }}>
-                Score: {lesson.score}
-              </div>
-            )}
-
-            <div style={{ marginTop: 16 }}>
+            <div style={{ marginTop: 16, display: "flex", justifyContent: "flex-end" }}>
               <Link className="btn" to={`/learning/quizzes/q1?lessonId=${lesson.lessonId}`}>
                 Take Quiz
               </Link>
             </div>
-          </div>
+          </>
         )}
       </main>
     </div>

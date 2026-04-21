@@ -4,6 +4,8 @@ import { useNavigate } from "react-router-dom";
 import { getAccessToken, logout, refreshAccessToken } from "../services/authService";
 
 const API_BASE = "http://localhost:8000/api";
+const TEST_IDS = ["mock-1", "mock-2", "mock-3", "mock-4"];
+
 async function requestDashboard(token) {
   const response = await fetch(`${API_BASE}/dashboard/me`, {
     headers: {
@@ -178,8 +180,9 @@ export default function Home() {
     try {
       const raw = localStorage.getItem("testGrades");
       const parsed = raw ? JSON.parse(raw) : {};
-      const percents = Object.values(parsed || {})
-        .map((grade) => Number(grade?.percent))
+      const percents = TEST_IDS.map((testId) => parsed?.[testId])
+        .filter(Boolean)
+        .map((grade) => Number(grade.percent))
         .filter((percent) => Number.isFinite(percent));
 
       if (percents.length === 0) {
@@ -198,16 +201,32 @@ export default function Home() {
     try {
       const raw = localStorage.getItem("testGrades");
       const parsed = raw ? JSON.parse(raw) : {};
+      const results = TEST_IDS.map((testId) => parsed?.[testId]).filter(Boolean);
 
-      return Object.values(parsed || {})
-        .filter((grade) => grade && grade.title && grade.submittedAt)
-        .sort((a, b) => new Date(b.submittedAt) - new Date(a.submittedAt))
-        .map((grade) => ({
-          id: grade.testId || `${grade.title}-${grade.submittedAt}`,
-          subject: grade.title,
-          result: `${Math.round(Number(grade.percent) || 0)}%`,
-          date: new Date(grade.submittedAt).toLocaleDateString(),
-        }));
+      if (results.length === 0) {
+        return [];
+      }
+
+      const average =
+        results.reduce((sum, result) => sum + (Number(result.percent) || 0), 0) /
+        results.length;
+      const latestSubmission = results.reduce((latest, result) => {
+        if (!latest) return result.submittedAt;
+        return new Date(result.submittedAt || 0) > new Date(latest || 0)
+          ? result.submittedAt
+          : latest;
+      }, null);
+
+      return [
+        {
+          id: "phishing-email-test",
+          subject: "Phishing Email Test",
+          result: `${Math.round(average)}%`,
+          date: latestSubmission
+            ? new Date(latestSubmission).toLocaleDateString()
+            : "Submission saved",
+        },
+      ];
     } catch {
       return [];
     }
@@ -241,7 +260,7 @@ export default function Home() {
 
         <div className="grid" style={{ display: "grid", gap: 12, gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))" }}>
           <div className="card">
-            <p><b>Phishing Score</b></p>
+            <p><b>Average Test Score</b></p>
             <p style={{ fontSize: 22, margin: 0 }}>{stats.phishingScore}%</p>
           </div>
           <div className="card">
@@ -257,7 +276,7 @@ export default function Home() {
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
               <h3 style={{ margin: 0 }}>Training Progress</h3>
               <button className="btn" type="button" onClick={() => navigate("/learning")}>
-                Go to Learning
+                Go To Learning
               </button>
             </div>
 

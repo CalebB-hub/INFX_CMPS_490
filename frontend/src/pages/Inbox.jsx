@@ -56,6 +56,8 @@ export default function Inbox() {
       return {};
     }
   }, []);
+  const completedCount = emails.filter((email) => email.testId && completedTests[email.testId]).length;
+  const allEmailsAnswered = completedCount === emails.length;
 
   return (
     <div>
@@ -75,7 +77,9 @@ export default function Inbox() {
             <div>
               <h2>Primary Mailbox</h2>
             </div>
-            <span className="inbox-count">{emails.length} messages</span>
+            <span className="inbox-count">
+              Answered {completedCount} of {emails.length} email questions
+            </span>
           </div>
 
           <div className="inbox-list" role="list" aria-label="Inbox email list">
@@ -119,6 +123,24 @@ export default function Inbox() {
             })}
           </div>
         </section>
+
+        {allEmailsAnswered && (
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "flex-end",
+              marginTop: 16,
+            }}
+          >
+            <button
+              className="btn"
+              type="button"
+              onClick={() => navigate("/test-grade")}
+            >
+              Submit Test
+            </button>
+          </div>
+        )}
       </main>
     </div>
   );

@@ -106,7 +106,7 @@ export default function Quizzes() {
                             {quiz ? (
                               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                                 <Link className="btn" to={`/learning/quizzes/${quiz.id}`}>
-                                  Take quiz
+                                  Take Quiz
                                 </Link>
                                 {showTestButton && (
                                   <Link

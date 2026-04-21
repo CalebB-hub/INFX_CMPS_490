@@ -9,6 +9,7 @@ import Profile from "./pages/Profile";
 import Learning from "./pages/Learning";
 import Quizzes from "./pages/Quizzes";
 import QuizDetails from "./pages/QuizDetails";
+import QuizGrade from "./pages/QuizGrade";
 import Grades from "./pages/Grades";
 import About from "./pages/About";
 import Settings from "./pages/Settings";
@@ -19,6 +20,7 @@ import Lessons from "./pages/Lessons";
 import ProfileRouter from "./pages/ProfileRouter";
 import Test from "./pages/Test";
 import Inbox from "./pages/Inbox";
+import TestGrade from "./pages/TestGrade";
 
 
 export default function App() {
@@ -41,7 +43,9 @@ export default function App() {
       <Route path="/learning/lessons" element={<ProtectedRoute><Lessons /></ProtectedRoute>} />
       <Route path="/learning/quizzes" element={<ProtectedRoute><Quizzes /></ProtectedRoute>} />
       <Route path="/learning/quizzes/:quizId" element={<ProtectedRoute><QuizDetails /></ProtectedRoute>} />
+      <Route path="/quiz-grade/:quizId" element={<ProtectedRoute><QuizGrade /></ProtectedRoute>} />
       <Route path="/test" element={<ProtectedRoute><Test /></ProtectedRoute>} />
+      <Route path="/test-grade" element={<ProtectedRoute><TestGrade /></ProtectedRoute>} />
       <Route path="/grades" element={<ProtectedRoute><Grades /></ProtectedRoute>} />
       <Route path="/about" element={<ProtectedRoute><About /></ProtectedRoute>} />
       <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
