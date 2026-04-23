@@ -235,7 +235,6 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         for item in LESSONS:
-            # Extract questions, choices, and answers from the LESSONS data
             questions = [entry["question"] for entry in item["questions"]]
             choices = [entry["choices"] for entry in item["questions"]]
             answers = [entry["answer"] for entry in item["questions"]]
