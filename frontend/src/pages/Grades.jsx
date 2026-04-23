@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react"
 import { Link } from "react-router-dom"
 import TopNav from "../components/TopNav"
-import { mockGetQuizzes } from "../mock/mockApi"
+import { fetchQuizzes } from "../services/quizService"
 import { getAccessToken, refreshAccessToken } from "../services/authService"
 
 const API_BASES = ["http://localhost:8000/api", "/api"]
@@ -11,12 +11,6 @@ const TEST_ID_BY_LESSON_ID = {
   2: "mock-2",
   3: "mock-3",
   4: "mock-4",
-}
-
-const QUIZ_ID_BY_LESSON_ID = {
-  1: "q1",
-  2: "q2",
-  3: "q3",
 }
 
 async function fetchWithAuth(url) {
@@ -75,7 +69,7 @@ export default function Grades() {
     let mounted = true
     setLoading(true)
     setError("")
-    Promise.all([fetchLessons(), mockGetQuizzes()])
+    Promise.all([fetchLessons(), fetchQuizzes()])
       .then(([lessonsData, quizzesData]) => {
         if (!mounted) return
         setLessons(lessonsData)
@@ -109,7 +103,7 @@ export default function Grades() {
   const quizByLessonId = useMemo(() => {
     const map = new Map()
     quizzes.forEach((quiz) => {
-      if (quiz.lessonId) map.set(quiz.lessonId, quiz)
+      if (quiz.lessonId) map.set(String(quiz.lessonId), quiz)
     })
     return map
   }, [quizzes])
@@ -118,8 +112,8 @@ export default function Grades() {
     () =>
       lessons.map((lesson) => {
         const lessonId = String(lesson.lessonId)
-        const quiz = quizByLessonId.get(`l${lessonId}`)
-        const quizId = quiz?.id || QUIZ_ID_BY_LESSON_ID[lessonId]
+        const quiz = quizByLessonId.get(lessonId)
+        const quizId = quiz?.id
         const quizGrade = quizId ? gradesByQuizId[quizId] : null
         const testGrade = testGrades[TEST_ID_BY_LESSON_ID[lessonId]]
 

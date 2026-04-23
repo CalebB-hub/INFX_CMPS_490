@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react"
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom"
 import TopNav from "../components/TopNav"
-import { mockGetQuizById } from "../mock/mockApi"
+import { fetchQuizById } from "../services/quizService"
 
 export default function QuizDetails() {
   const navigate = useNavigate()
@@ -19,7 +19,7 @@ export default function QuizDetails() {
     let mounted = true
     setLoading(true)
     setError("")
-    mockGetQuizById(quizId)
+    fetchQuizById(quizId)
       .then((data) => {
         if (!mounted) return
         setQuiz(data)

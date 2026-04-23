@@ -68,9 +68,9 @@ export default function SignupIndividual() {
             src={PhishFreeFullLogo}
             alt="Phish Free Full Logo.png"
             style={{
-              width: "325px",
+              width: "350px",
               height: "auto",
-              marginBottom: "4px",
+              marginBottom: "8px",
               display: "block",
             }}
           />
@@ -135,7 +135,7 @@ export default function SignupIndividual() {
         </form>
         <footer style={{ marginTop: "32px", textAlign: "center", borderTop: "1px solid var(--border-strong)", paddingTop: "20px" }}>
           <p style={{ fontSize: "14px", marginBottom: "12px" }}>
-            Have an account?{" "}
+            Already have an account?{" "}
             <Link to="/login" style={{ color: "var(--accent)", fontWeight: "bold" }}>
               Login Here
             </Link>

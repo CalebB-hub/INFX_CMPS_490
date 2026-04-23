@@ -20,6 +20,7 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [status, setStatus] = useState({ loading: false, error: "" });
   const [showPassword, setShowPassword] = useState(false);
+  const canSubmit = email.trim() && password.trim();
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -87,9 +88,9 @@ export default function Login() {
             src={PhishFreeFullLogo}
             alt="Phish Free Full Logo.png"
             style={{
-              width: "325px",
+              width: "350px",
               height: "auto",
-              marginBottom: "4px",
+              marginBottom: "8px",
               display: "block",
             }}
           />
@@ -146,7 +147,7 @@ export default function Login() {
             </div>
           </label>
 
-          <button className="btn" disabled={status.loading}>
+          <button className="btn" disabled={status.loading || !canSubmit}>
             {status.loading ? "Checking..." : "Login"}
           </button>
         </form>

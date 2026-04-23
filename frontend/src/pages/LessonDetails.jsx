@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react"
 import { Link, useParams } from "react-router-dom"
 import TopNav from "../components/TopNav"
 import { getAccessToken, refreshAccessToken } from "../services/authService"
+import { fetchQuizzes } from "../services/quizService"
 
 const API_BASES = ["http://localhost:8000/api", "/api"]
 
@@ -55,6 +56,7 @@ async function fetchLesson(lessonId) {
 export default function LessonDetails() {
   const { lessonId } = useParams()
   const [lesson, setLesson] = useState(null)
+  const [quiz, setQuiz] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
 
@@ -62,10 +64,13 @@ export default function LessonDetails() {
     let mounted = true
     setLoading(true)
     setError("")
-    fetchLesson(lessonId)
-      .then((data) => {
+    Promise.all([fetchLesson(lessonId), fetchQuizzes()])
+      .then(([data, quizzes]) => {
         if (!mounted) return
         setLesson(data)
+        setQuiz(
+          quizzes.find((item) => String(item.lessonId) === String(data.lessonId)) || null
+        )
       })
       .catch((e) => setError(e.message || "Failed to load lesson"))
       .finally(() => setLoading(false))
@@ -115,11 +120,13 @@ export default function LessonDetails() {
               )}
             </div>
 
-            <div style={{ marginTop: 16, display: "flex", justifyContent: "flex-end" }}>
-              <Link className="btn" to={`/learning/quizzes/q1?lessonId=${lesson.lessonId}`}>
-                Take Quiz
-              </Link>
-            </div>
+            {quiz && (
+              <div style={{ marginTop: 16, display: "flex", justifyContent: "flex-end" }}>
+                <Link className="btn" to={`/learning/quizzes/${quiz.id}?lessonId=${lesson.lessonId}`}>
+                  Take Quiz
+                </Link>
+              </div>
+            )}
           </>
         )}
       </main>

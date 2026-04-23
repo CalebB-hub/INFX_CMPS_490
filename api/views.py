@@ -324,7 +324,7 @@ def me(request):
             'email': user.email,
             'firstName': user.first_name,
             'lastName': user.last_name,
-            'company': user.company.name if user.company else None,
+            'memberSince': user.member_since,
             'role': user.role.role_name if user.role else None,
         },
         status=status.HTTP_200_OK,
