@@ -348,7 +348,7 @@ export default function Test() {
     <div>
       <TopNav />
       <main className="page">
-        <h2>Test</h2>
+        <h2>Email</h2>
         <p className="muted">Review the email and answer the questions below.</p>
 
         <div className="card" style={{ marginTop: 16 }}>
