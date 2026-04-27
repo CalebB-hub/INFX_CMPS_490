@@ -517,15 +517,19 @@ def learning_lessons(request):
 
     for lesson in lessons_query:
         lesson_score = score_map.get(lesson.lesson_id)
-        lessons_list.append({
-            'lessonId': lesson.lesson_id,
-            'moduleId': 1,
-            'moduleTitle': 'Lessons',
-            'title': lesson.title,
-            'lessonMaterial': lesson.lesson_material,
-            'score': float(lesson_score.score) if lesson_score else None,
-            'completedAt': lesson_score.updated_at.isoformat() if lesson_score else None,
-        })
+        parsed_questions = _safe_json_loads(lesson.questions)
+        lessons_list.append(
+            {
+                'lessonId': lesson.lesson_id,
+                'moduleId': 1,
+                'moduleTitle': 'Lessons',
+                'title': lesson.title,
+                'lessonMaterial': lesson.lesson_material,
+                'totalQuestions': len(parsed_questions) if isinstance(parsed_questions, list) else 0,
+                'score': float(lesson_score.score) if lesson_score else None,
+                'completedAt': lesson_score.updated_at.isoformat() if lesson_score else None,
+            }
+        )
 
     return Response(
         {
@@ -544,6 +548,9 @@ def learning_lesson_detail(request, lesson_id):
     """
     lesson = get_object_or_404(Lesson, lesson_id=lesson_id)
     lesson_score = LessonScore.objects.filter(user=request.user, lesson=lesson).first()
+    questions = _safe_json_loads(lesson.questions)
+    choices = _safe_json_loads(lesson.choices)
+    answers = _safe_json_loads(lesson.answers)
 
     return Response(
         {
@@ -552,7 +559,9 @@ def learning_lesson_detail(request, lesson_id):
             'moduleTitle': 'Lessons',
             'title': lesson.title,
             'lessonMaterial': lesson.lesson_material,
-            'questions': lesson.questions,
+            'questions': questions if isinstance(questions, list) else [],
+            'choices': choices if isinstance(choices, list) else [],
+            'answers': answers if isinstance(answers, list) else [],
             'score': float(lesson_score.score) if lesson_score else None,
             'completedAt': lesson_score.updated_at.isoformat() if lesson_score else None,
         },
@@ -568,6 +577,9 @@ def lesson_page_detail(request, lesson_id):
     """
     lesson = get_object_or_404(Lesson, lesson_id=lesson_id)
     lesson_score = LessonScore.objects.filter(user=request.user, lesson=lesson).first()
+    questions = _safe_json_loads(lesson.questions)
+    choices = _safe_json_loads(lesson.choices)
+    answers = _safe_json_loads(lesson.answers)
 
     return Response(
         {
@@ -576,9 +588,100 @@ def lesson_page_detail(request, lesson_id):
             'moduleTitle': 'Lessons',
             'title': lesson.title,
             'lessonMaterial': lesson.lesson_material,
-            'questions': lesson.questions,
+            'questions': questions if isinstance(questions, list) else [],
+            'choices': choices if isinstance(choices, list) else [],
+            'answers': answers if isinstance(answers, list) else [],
             'score': float(lesson_score.score) if lesson_score else None,
             'completedAt': lesson_score.updated_at.isoformat() if lesson_score else None,
+        },
+        status=status.HTTP_200_OK,
+    )
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def learning_lesson_scores(request):
+    """
+    Return all lesson scores for the authenticated user.
+    """
+    scores = (
+        LessonScore.objects
+        .filter(user=request.user)
+        .select_related('lesson')
+        .order_by('-updated_at')
+    )
+
+    payload = [
+        {
+            'lessonScoreId': score.lesson_score_id,
+            'lessonId': score.lesson.lesson_id,
+            'lessonTitle': score.lesson.title,
+            'score': float(score.score),
+            'createdAt': score.created_at.isoformat(),
+            'updatedAt': score.updated_at.isoformat(),
+        }
+        for score in scores
+    ]
+
+    return Response(
+        {
+            'scores': payload,
+            'totalScores': len(payload),
+        },
+        status=status.HTTP_200_OK,
+    )
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def learning_lesson_score_submit(request, lesson_id):
+    """
+    Record a lesson score attempt for the authenticated user.
+    Keeps only the user's best score for each lesson.
+    Body: { "score": number }
+    """
+    lesson = get_object_or_404(Lesson, lesson_id=lesson_id)
+    body = request.data if getattr(request, 'data', None) is not None else {}
+    if not isinstance(body, dict):
+        return Response(
+            {'error': 'Request body must be JSON object.'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    score = body.get('score', None)
+    if score is None:
+        return Response(
+            {'error': 'score is required.'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    try:
+        score_value = float(score)
+    except Exception:
+        return Response(
+            {'error': 'score must be a number.'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    if score_value < 0:
+        return Response(
+            {'error': 'score must be greater than or equal to 0.'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    lesson_score, was_updated = LessonScore.record_attempt(
+        user=request.user,
+        lesson=lesson,
+        score=score_value,
+    )
+
+    return Response(
+        {
+            'lessonScoreId': lesson_score.lesson_score_id,
+            'lessonId': lesson.lesson_id,
+            'score': float(lesson_score.score),
+            'completedAt': lesson_score.updated_at.isoformat(),
+            'wasUpdated': was_updated,
         },
         status=status.HTTP_200_OK,
     )
@@ -659,6 +762,93 @@ def _safe_json_loads(value):
         return json.loads(value)
     except Exception:
         return None
+
+
+def _serialize_question_for_frontend(question, include_answer=False):
+    options = _safe_json_loads(question.response)
+    payload = {
+        'questionId': question.question_id,
+        'questionText': question.question_text,
+        'questionType': question.question_type,
+        'options': options if isinstance(options, list) else [],
+        'score': float(question.score) if question.score is not None else None,
+    }
+
+    if include_answer:
+        if str(question.answer).isdigit():
+            payload['correctIndex'] = int(question.answer)
+        else:
+            payload['answer'] = question.answer
+
+    return payload
+
+
+def _get_accessible_test_or_404(request, test_id):
+    test = get_object_or_404(Test, test_id=test_id)
+    if test.user_id_id is not None and test.user_id_id != request.user.user_id:
+        return None
+    return test
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def test_detail(request, test_id):
+    """
+    Return one test and its questions for the authenticated user.
+    Also allows reading shared template tests where user_id is null.
+    """
+    test = _get_accessible_test_or_404(request, test_id)
+    if test is None:
+        return Response({'error': 'Test not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+    meta = _safe_json_loads(test.description) or {}
+    questions = Question.objects.filter(test_id=test).order_by('question_id')
+
+    return Response(
+        {
+            'testId': test.test_id,
+            'title': test.title,
+            'description': test.description,
+            'metadata': meta if isinstance(meta, dict) else {},
+            'dateTaken': test.date_taken.isoformat() if test.date_taken else None,
+            'score': float(test.score) if test.score is not None else None,
+            'questions': [
+                _serialize_question_for_frontend(
+                    question,
+                    include_answer=(test.user_id_id is None),
+                )
+                for question in questions
+            ],
+        },
+        status=status.HTTP_200_OK,
+    )
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def test_questions(request, test_id):
+    """
+    Return only questions for a specific test.
+    """
+    test = _get_accessible_test_or_404(request, test_id)
+    if test is None:
+        return Response({'error': 'Test not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+    questions = Question.objects.filter(test_id=test).order_by('question_id')
+    return Response(
+        {
+            'testId': test.test_id,
+            'questions': [
+                _serialize_question_for_frontend(
+                    question,
+                    include_answer=(test.user_id_id is None),
+                )
+                for question in questions
+            ],
+            'totalQuestions': questions.count(),
+        },
+        status=status.HTTP_200_OK,
+    )
 
 
 @api_view(['GET', 'POST'])
