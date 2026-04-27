@@ -938,16 +938,41 @@ def quizzes(request):
 
         payload = []
         for lesson in lessons:
-            quiz_data = _extract_quiz_from_lesson_material(lesson.lesson_material)
-            if not quiz_data:
+            questions = _safe_json_loads(lesson.questions)
+            choices = _safe_json_loads(lesson.choices)
+            answers = _safe_json_loads(lesson.answers)
+
+            if not isinstance(questions, list) or not isinstance(choices, list):
+                continue
+
+            question_payload = []
+            for idx, (q_text, q_choices) in enumerate(zip(questions, choices)):
+                answer_text = answers[idx] if isinstance(answers, list) and idx < len(answers) else None
+                correct_index = None
+                if answer_text is not None and isinstance(q_choices, list):
+                    try:
+                        correct_index = [str(opt) for opt in q_choices].index(str(answer_text))
+                    except ValueError:
+                        correct_index = None
+
+                question_payload.append(
+                    {
+                        'id': str(idx + 1),
+                        'prompt': str(q_text),
+                        'options': [str(opt) for opt in q_choices] if isinstance(q_choices, list) else [],
+                        'correctIndex': correct_index,
+                    }
+                )
+
+            if not question_payload:
                 continue
 
             payload.append(
                 {
                     'id': str(lesson.lesson_id),
                     'lessonId': lesson.lesson_id,
-                    'title': quiz_data.get('title') or lesson.title,
-                    'questions': quiz_data.get('questions', []),
+                    'title': lesson.title,
+                    'questions': question_payload,
                 }
             )
 
