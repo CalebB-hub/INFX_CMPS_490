@@ -12,6 +12,7 @@ from django.db.models import Avg, Count, Q
 from django.utils import timezone
 
 import json
+import re
 from datetime import datetime, timezone as dt_timezone
 
 from .models import Role, Company, Assignment, Test, Lesson, Question, LessonScore
@@ -764,6 +765,80 @@ def _safe_json_loads(value):
         return None
 
 
+def _normalize_quiz_questions(raw_questions):
+    """Normalize various quiz question formats to the API shape."""
+    if not isinstance(raw_questions, list):
+        return []
+
+    normalized = []
+    for idx, item in enumerate(raw_questions):
+        if not isinstance(item, dict):
+            continue
+
+        prompt = str(item.get('prompt') or item.get('question') or '').strip()
+        options = item.get('options', item.get('choices', []))
+        if not prompt or not isinstance(options, list) or len(options) < 2:
+            continue
+
+        answer = item.get('correctIndex', item.get('answer', None))
+        correct_index = None
+        if isinstance(answer, int) and 0 <= answer < len(options):
+            correct_index = answer
+        elif str(answer).isdigit():
+            answer_index = int(answer)
+            if 0 <= answer_index < len(options):
+                correct_index = answer_index
+        elif isinstance(answer, str):
+            try:
+                correct_index = [str(opt) for opt in options].index(answer)
+            except ValueError:
+                correct_index = None
+
+        normalized.append(
+            {
+                'id': str(item.get('id', f'{idx + 1}')),
+                'prompt': prompt,
+                'options': [str(opt) for opt in options],
+                'correctIndex': correct_index,
+            }
+        )
+
+    return normalized
+
+
+def _extract_quiz_from_lesson_material(lesson_material):
+    """
+    Extract quiz payload from lesson_material, leaving lesson prose behind.
+    """
+    parsed = _safe_json_loads(lesson_material)
+
+    if isinstance(parsed, dict):
+        quiz_obj = parsed.get('quiz') if isinstance(parsed.get('quiz'), dict) else parsed
+        questions = _normalize_quiz_questions(quiz_obj.get('questions'))
+        if questions:
+            return {
+                'title': str(quiz_obj.get('title') or '').strip() or None,
+                'questions': questions,
+            }
+
+    if isinstance(lesson_material, str):
+        # Support quiz JSON embedded in a fenced code block inside the lesson text.
+        blocks = re.findall(r'```(?:json)?\s*([\s\S]*?)\s*```', lesson_material, flags=re.IGNORECASE)
+        for block in blocks:
+            candidate = _safe_json_loads(block)
+            if not isinstance(candidate, dict):
+                continue
+            quiz_obj = candidate.get('quiz') if isinstance(candidate.get('quiz'), dict) else candidate
+            questions = _normalize_quiz_questions(quiz_obj.get('questions'))
+            if questions:
+                return {
+                    'title': str(quiz_obj.get('title') or '').strip() or None,
+                    'questions': questions,
+                }
+
+    return None
+
+
 def _serialize_question_for_frontend(question, include_answer=False):
     options = _safe_json_loads(question.response)
     payload = {
@@ -859,35 +934,20 @@ def quizzes(request):
     POST: create a quiz template.
     """
     if request.method == 'GET':
-        quizzes = (
-            Test.objects.all()
-            .order_by('test_id')
-        )
+        lessons = Lesson.objects.all().order_by('lesson_id')
 
         payload = []
-        for quiz in quizzes:
-            meta = _safe_json_loads(quiz.description) or {}
-            lesson_id = meta.get('lessonId') if isinstance(meta, dict) else None
-
-            questions = Question.objects.filter(test_id=quiz).order_by('question_id')
-            question_payload = []
-            for q in questions:
-                options = _safe_json_loads(q.response)
-                question_payload.append(
-                    {
-                        'id': str(q.question_id),
-                        'prompt': q.question_text,
-                        'options': options if isinstance(options, list) else [],
-                        'correctIndex': int(q.answer) if str(q.answer).isdigit() else None,
-                    }
-                )
+        for lesson in lessons:
+            quiz_data = _extract_quiz_from_lesson_material(lesson.lesson_material)
+            if not quiz_data:
+                continue
 
             payload.append(
                 {
-                    'id': str(quiz.test_id),
-                    'lessonId': lesson_id,
-                    'title': quiz.title,
-                    'questions': question_payload,
+                    'id': str(lesson.lesson_id),
+                    'lessonId': lesson.lesson_id,
+                    'title': quiz_data.get('title') or lesson.title,
+                    'questions': quiz_data.get('questions', []),
                 }
             )
 
