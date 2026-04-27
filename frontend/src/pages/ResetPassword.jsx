@@ -123,7 +123,7 @@ export default function ResetPassword() {
             const allPassed = Object.values(checks).every(Boolean);
             return (
               <button className="btn" type="submit" disabled={status.loading || !allPassed}>
-                {status.loading ? "Updating..." : "Set new password"}
+                {status.loading ? "Updating..." : "Set New Password"}
               </button>
             );
           })()}

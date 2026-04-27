@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
+import PhishFreeFullLogo from "../Logos/Phish Free Full Logo.png";
 import PasswordStrength from "../components/PasswordStrength";
 import PasswordToggleIcon from "../components/PasswordToggleIcon";
 import { computeChecks } from "../utils/passwordUtils";
@@ -54,7 +55,29 @@ export default function SignupIndividual() {
   return (
     <div className="auth">
       <div className="auth__card">
-        <h2>Individual Signup</h2>
+        <header
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            textAlign: "center",
+            marginBottom: "24px",
+          }}
+        >
+          <img
+            src={PhishFreeFullLogo}
+            alt="Phish Free Full Logo.png"
+            style={{
+              width: "350px",
+              height: "auto",
+              marginBottom: "8px",
+              display: "block",
+            }}
+          />
+          <h1 style={{ fontWeight: "800", fontSize: "1.8rem", margin: "0" }}>
+            Sign up
+          </h1>
+        </header>
         {status.error && <div className="alert alert--error">{status.error}</div>}
         {status.success && <div className="alert alert--success">{status.success}</div>}
 
@@ -110,10 +133,13 @@ export default function SignupIndividual() {
             );
           })()}
         </form>
-        <footer style={{ marginTop: "20px", textAlign: "center" }}>
-          <Link to="/signup" style={{ color: "var(--accent)" }}>
-            Back to selection
-          </Link>
+        <footer style={{ marginTop: "32px", textAlign: "center", borderTop: "1px solid var(--border-strong)", paddingTop: "20px" }}>
+          <p style={{ fontSize: "14px", marginBottom: "12px" }}>
+            Already have an account?{" "}
+            <Link to="/login" style={{ color: "var(--accent)", fontWeight: "bold" }}>
+              Login Here
+            </Link>
+          </p>
         </footer>
       </div>
     </div>

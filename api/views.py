@@ -860,7 +860,7 @@ def quizzes(request):
     """
     if request.method == 'GET':
         quizzes = (
-            Test.objects.filter(user_id__isnull=True)
+            Test.objects.all()
             .order_by('test_id')
         )
 

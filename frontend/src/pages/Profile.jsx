@@ -101,8 +101,7 @@ export default function Profile() {
             <h3 style={{ marginTop: 0 }}>Profile Information</h3>
             <p><b>Name:</b> {[user?.firstName, user?.lastName].filter(Boolean).join(" ") || "-"}</p>
             <p><b>Email:</b> {user?.email || "-"}</p>
-            <p><b>Organization:</b> {user?.company || "-"}</p>
-            <p><b>Role:</b> {user?.role || "-"}</p>
+            <p><b>Member Since:</b> {user?.memberSince || "-"}</p>
 
             <div style={{ display: "flex", gap: "10px", marginTop: "12px" }}>
               <button

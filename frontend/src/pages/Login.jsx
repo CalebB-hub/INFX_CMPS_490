@@ -20,6 +20,7 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [status, setStatus] = useState({ loading: false, error: "" });
   const [showPassword, setShowPassword] = useState(false);
+  const canSubmit = email.trim() && password.trim();
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -87,14 +88,14 @@ export default function Login() {
             src={PhishFreeFullLogo}
             alt="Phish Free Full Logo.png"
             style={{
-              width: "325px",
+              width: "350px",
               height: "auto",
-              marginBottom: "4px",
+              marginBottom: "8px",
               display: "block",
             }}
           />
           <h1 style={{ fontWeight: "800", fontSize: "1.8rem", margin: "0" }}>
-            Sign in
+            Login
           </h1>
           <p className="muted" style={{ margin: "4px 0 0 0", fontSize: "14px" }}>
             Securely access your training dashboard.
@@ -120,7 +121,7 @@ export default function Login() {
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <span>Password</span>
               <Link to="/forgot-password" style={{ fontSize: "0.85rem", color: "var(--accent)" }}>
-                Forgot password?
+                Forgot Password?
               </Link>
             </div>
             <div style={{ position: "relative" }}>
@@ -146,7 +147,7 @@ export default function Login() {
             </div>
           </label>
 
-          <button className="btn" disabled={status.loading}>
+          <button className="btn" disabled={status.loading || !canSubmit}>
             {status.loading ? "Checking..." : "Login"}
           </button>
         </form>
@@ -155,7 +156,7 @@ export default function Login() {
           <p style={{ fontSize: "14px", marginBottom: "12px" }}>
             Don't have an account?{" "}
             <Link to="/signup" style={{ color: "var(--accent)", fontWeight: "bold" }}>
-              Sign up here
+              Sign Up Here
             </Link>
           </p>
         </footer>

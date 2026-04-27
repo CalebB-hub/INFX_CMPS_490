@@ -3,7 +3,6 @@ import { Routes, Route, Navigate } from "react-router-dom";
 import Login from "./pages/Login";
 import SignupRole from "./pages/SignupRole";
 import SignupIndividual from "./pages/SignupIndividual";
-import SignupCompany from "./pages/SignupCompany";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import Home from "./pages/Home";
@@ -11,6 +10,7 @@ import Profile from "./pages/Profile";
 import Learning from "./pages/Learning";
 import Quizzes from "./pages/Quizzes";
 import QuizDetails from "./pages/QuizDetails";
+import QuizGrade from "./pages/QuizGrade";
 import Grades from "./pages/Grades";
 import About from "./pages/About";
 import Settings from "./pages/Settings";
@@ -20,6 +20,8 @@ import LessonDetails from "./pages/LessonDetails";
 import Lessons from "./pages/Lessons";
 import ProfileRouter from "./pages/ProfileRouter";
 import Test from "./pages/Test";
+import Inbox from "./pages/Inbox";
+import TestGrade from "./pages/TestGrade";
 
 
 export default function App() {
@@ -29,9 +31,10 @@ export default function App() {
       <Route path="/login" element={<Login />} />
       <Route path="/signup" element={<SignupRole />} />
       <Route path="/signup/individual" element={<SignupIndividual />} />
-      <Route path="/signup/company" element={<SignupCompany />} />
+      <Route path="/signup/company" element={<Navigate to="/signup/individual" replace />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password" element={<ResetPassword />} />
+      <Route path="/inbox" element={<Inbox />} />
       
       {/* Protected Routes */}
       <Route path="/home" element={<ProtectedRoute><Home /></ProtectedRoute>} />
@@ -41,7 +44,9 @@ export default function App() {
       <Route path="/learning/lessons" element={<ProtectedRoute><Lessons /></ProtectedRoute>} />
       <Route path="/learning/quizzes" element={<ProtectedRoute><Quizzes /></ProtectedRoute>} />
       <Route path="/learning/quizzes/:quizId" element={<ProtectedRoute><QuizDetails /></ProtectedRoute>} />
+      <Route path="/quiz-grade/:quizId" element={<ProtectedRoute><QuizGrade /></ProtectedRoute>} />
       <Route path="/test" element={<ProtectedRoute><Test /></ProtectedRoute>} />
+      <Route path="/test-grade" element={<ProtectedRoute><TestGrade /></ProtectedRoute>} />
       <Route path="/grades" element={<ProtectedRoute><Grades /></ProtectedRoute>} />
       <Route path="/about" element={<ProtectedRoute><About /></ProtectedRoute>} />
       <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />

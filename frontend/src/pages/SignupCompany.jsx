@@ -97,7 +97,7 @@ export default function SignupCompany() {
           })()}
         </form>
         <footer style={{marginTop: "20px", textAlign: "center"}}>
-          <Link to="/signup" style={{color: "var(--accent)"}}>Back to selection</Link>
+          <Link to="/signup" style={{color: "var(--accent)"}}>Back To Selection</Link>
         </footer>
       </div>
     </div>

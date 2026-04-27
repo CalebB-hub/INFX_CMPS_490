@@ -8,23 +8,19 @@ export default function SignupRole() {
     <div className="auth">
       <div className="auth__card" style={{ textAlign: "center" }}>
         <header style={{ marginBottom: "24px" }}>
-          <img src={PhishFreeFullLogo} alt="Logo" style={{ width: "280px", marginBottom: "12px" }} />
-          <h1 style={{ fontWeight: "800", fontSize: "1.8rem" }}>Join Phish Free</h1>
-          <p className="muted">Choose the account type that fits your needs.</p>
+          <img src={PhishFreeFullLogo} alt="Logo" style={{ width: "350px", marginBottom: "8px" }} />
+          <h1 style={{ fontWeight: "800", fontSize: "1.8rem" }}>Welcome to Phish Free</h1>
+          <p className="muted">Create an account or Login to continue.</p>
         </header>
 
         <div style={{ display: "grid", gap: "16px" }}>
           <button className="btn" onClick={() => navigate("/signup/individual")}>
-            I am an Individual
+            Sign Up
           </button>
-          <button className="btn btn--ghost" onClick={() => navigate("/signup/company")}>
-            I am a Company / Organization
+          <button className="btn" onClick={() => navigate("/login")}>
+            Login
           </button>
         </div>
-
-        <footer style={{ marginTop: "32px", borderTop: "1px solid var(--border-strong)", paddingTop: "20px" }}>
-          Already have an account? <Link to="/login" style={{ color: "var(--accent)", fontWeight: "bold" }}>Login here</Link>
-        </footer>
       </div>
     </div>
   );
