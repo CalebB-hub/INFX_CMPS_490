@@ -117,7 +117,14 @@ export default function Profile() {
     () => [user?.firstName, user?.lastName].filter(Boolean).join(" ") || "Name unavailable",
     [user]
   );
-  const memberSinceText = user?.memberSince || "Not available";
+  const memberSinceText = useMemo(() => {
+    if (!user?.memberSince) return "Not available";
+    const parsed = new Date(user.memberSince);
+    if (Number.isNaN(parsed.getTime())) {
+      return "Not available";
+    }
+    return parsed.toLocaleDateString();
+  }, [user?.memberSince]);
   const initials = `${user?.firstName?.[0] || ""}${user?.lastName?.[0] || ""}`.trim() || "ME";
 
   function resetFormFromUser(profileUser) {

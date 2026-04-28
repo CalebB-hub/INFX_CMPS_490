@@ -320,87 +320,91 @@ export default function Home() {
             </div>
           </div>
         )}
-        {!loading && error && <div className="alert alert--error">{error}</div>}
+        {!loading && (
+          <>
+            {error && <div className="alert alert--error">{error}</div>}
 
-        <div className="grid" style={{ display: "grid", gap: 12, gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))" }}>
-          <div className="card">
-            <p><b>Average Test Score</b></p>
-            <p style={{ fontSize: 22, margin: 0 }}>{stats.phishingScore}%</p>
-          </div>
-          <div className="card">
-            <p><b>Lessons Completed</b></p>
-            <p style={{ fontSize: 22, margin: 0 }}>
-              {stats.lessonsCompleted} / {stats.lessonsTotal}
-            </p>
-          </div>
-        </div>
-
-        <section style={{ marginTop: 16 }}>
-          <div className="card">
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
-              <h3 style={{ margin: 0 }}>Training Progress</h3>
-              <button className="btn" type="button" onClick={() => navigate("/learning")}>
-                Go To Learning
-              </button>
+            <div className="grid" style={{ display: "grid", gap: 12, gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))" }}>
+              <div className="card">
+                <p><b>Average Test Score</b></p>
+                <p style={{ fontSize: 22, margin: 0 }}>{stats.phishingScore}%</p>
+              </div>
+              <div className="card">
+                <p><b>Lessons Completed</b></p>
+                <p style={{ fontSize: 22, margin: 0 }}>
+                  {stats.lessonsCompleted} / {stats.lessonsTotal}
+                </p>
+              </div>
             </div>
 
-            <div style={{ marginTop: 10 }}>
-              {lessonProgress.length === 0 ? (
-                <p className="muted" style={{ margin: 0 }}>No assignments available.</p>
-              ) : (
-                lessonProgress.map((lesson) => (
-                  <div
-                    key={lesson.id}
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      padding: "8px 0",
-                      borderBottom: "1px solid rgba(0,0,0,0.08)",
-                    }}
-                  >
-                    <span>{lesson.title}</span>
-                    <b>{lesson.status}</b>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-        </section>
+            <section style={{ marginTop: 16 }}>
+              <div className="card">
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
+                  <h3 style={{ margin: 0 }}>Training Progress</h3>
+                  <button className="btn" type="button" onClick={() => navigate("/learning")}>
+                    Go To Learning
+                  </button>
+                </div>
 
-        <section style={{ marginTop: 16 }}>
-          <div className="card">
-            <h3 style={{ marginTop: 0 }}>Simulation History</h3>
-
-            <div style={{ overflowX: "auto" }}>
-              <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                <thead>
-                  <tr>
-                    <th style={{ textAlign: "left", padding: "8px 0" }}>Subject</th>
-                    <th style={{ textAlign: "left", padding: "8px 0" }}>Result</th>
-                    <th style={{ textAlign: "left", padding: "8px 0" }}>Date</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {simulationHistory.length === 0 ? (
-                    <tr style={{ borderTop: "1px solid rgba(0,0,0,0.08)" }}>
-                      <td style={{ padding: "8px 0" }} colSpan="3" className="muted">
-                        No recent test activity.
-                      </td>
-                    </tr>
+                <div style={{ marginTop: 10 }}>
+                  {lessonProgress.length === 0 ? (
+                    <p className="muted" style={{ margin: 0 }}>No assignments available.</p>
                   ) : (
-                    simulationHistory.map((simulation) => (
-                      <tr key={simulation.id} style={{ borderTop: "1px solid rgba(0,0,0,0.08)" }}>
-                        <td style={{ padding: "8px 0" }}>{simulation.subject}</td>
-                        <td style={{ padding: "8px 0" }}><b>{simulation.result}</b></td>
-                        <td style={{ padding: "8px 0" }}>{simulation.date}</td>
-                      </tr>
+                    lessonProgress.map((lesson) => (
+                      <div
+                        key={lesson.id}
+                        style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          padding: "8px 0",
+                          borderBottom: "1px solid rgba(0,0,0,0.08)",
+                        }}
+                      >
+                        <span>{lesson.title}</span>
+                        <b>{lesson.status}</b>
+                      </div>
                     ))
                   )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </section>
+                </div>
+              </div>
+            </section>
+
+            <section style={{ marginTop: 16 }}>
+              <div className="card">
+                <h3 style={{ marginTop: 0 }}>Simulation History</h3>
+
+                <div style={{ overflowX: "auto" }}>
+                  <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                    <thead>
+                      <tr>
+                        <th style={{ textAlign: "left", padding: "8px 0" }}>Subject</th>
+                        <th style={{ textAlign: "left", padding: "8px 0" }}>Result</th>
+                        <th style={{ textAlign: "left", padding: "8px 0" }}>Date</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {simulationHistory.length === 0 ? (
+                        <tr style={{ borderTop: "1px solid rgba(0,0,0,0.08)" }}>
+                          <td style={{ padding: "8px 0" }} colSpan="3" className="muted">
+                            No recent test activity.
+                          </td>
+                        </tr>
+                      ) : (
+                        simulationHistory.map((simulation) => (
+                          <tr key={simulation.id} style={{ borderTop: "1px solid rgba(0,0,0,0.08)" }}>
+                            <td style={{ padding: "8px 0" }}>{simulation.subject}</td>
+                            <td style={{ padding: "8px 0" }}><b>{simulation.result}</b></td>
+                            <td style={{ padding: "8px 0" }}>{simulation.date}</td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </section>
+          </>
+        )}
       </main>
     </div>
   );

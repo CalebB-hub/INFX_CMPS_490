@@ -6,25 +6,21 @@ export default function About() {
       <TopNav />
       <main className="page">
         <h2>About Phish Free</h2>
-        <p className="muted">
-          Phish Free helps teams build phishing awareness through guided learning, simulations, and
-          progress tracking.
-        </p>
 
         <div className="card">
           <h3>What this app includes</h3>
-          <ul>
-            <li>Interactive learning modules for spotting red flags</li>
-            <li>Simulated phishing scenarios with safe practice</li>
-            <li>Simple progress tracking and user profiles</li>
+            <ul>
+              <li>Realistic AI generated phishing simulations</li>
+              <li>Cybersecurity lessons on phishing awareness</li>
+              <li>Quizzes to reinforce learning</li>
+              <li>User progress tracking and profiles</li>
           </ul>
         </div>
 
         <div className="card">
-          <h3>Our mission</h3>
+          <h3>Our Mission</h3>
           <p>
-            Make security training approachable, practical, and consistent so people can recognize
-            threats before they click. 
+            Phish Free’s mission is to reduce phishing attacks by educating users through realistic simulations, interactive training, and AI powered cybersecurity awareness, helping build a smarter and safer digital workforce.
           </p>
         </div>
       </main>

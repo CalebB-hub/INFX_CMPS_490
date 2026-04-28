@@ -325,6 +325,7 @@ def me(request):
             'email': user.email,
             'firstName': user.first_name,
             'lastName': user.last_name,
+            'memberSince': user.date_joined.isoformat() if user.date_joined else None,
             'company': user.company.name if user.company else None,
             'role': user.role.role_name if user.role else None,
         },

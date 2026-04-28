@@ -196,7 +196,7 @@ export default function Grades() {
                     >
                       <div
                         style={{
-                          border: "1px solid rgba(0,0,0,0.08)",
+                          border: "1px solid rgba(255,255,255,0.18)",
                           borderRadius: 12,
                           padding: 14,
                         }}
@@ -217,7 +217,7 @@ export default function Grades() {
 
                       <div
                         style={{
-                          border: "1px solid rgba(0,0,0,0.08)",
+                          border: "1px solid rgba(255,255,255,0.18)",
                           borderRadius: 12,
                           padding: 14,
                         }}
