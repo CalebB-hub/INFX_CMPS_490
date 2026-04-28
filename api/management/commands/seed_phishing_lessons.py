@@ -114,14 +114,21 @@ QR codes can also hide dangerous links. They should be treated with the same cau
         "lesson_material": """Phishing is not only about links. Some phishing attacks use files and downloads to install malware, steal information, or trick users into more risky actions. Attachments can be disguised as invoices, forms, delivery notices, or important work documents.
 
 ## Main Idea
+
 Unexpected attachments should not be opened unless they are verified first. A file can seem harmless while still being part of an attack, especially if it appears in a message that creates urgency or confusion.
 
 ## Common Red Flags
+
 - Unexpected invoices
+
 - Fake shipping notices
+
 - Urgent document requests
+
 - Zipped files from unknown senders
+
 - Attachments that ask you to enable content
+
 - File requests that seem out of place
 
 These signs matter because attackers often rely on curiosity and routine. If a file appears out of nowhere or feels inconsistent with normal communication, it should be checked before being opened.
@@ -167,9 +174,11 @@ Suspicious emails should usually be reported and deleted instead of replied to o
         "lesson_material": """Some phishing attacks are highly targeted and are designed to look like they come from a boss, vendor, bank, or trusted contact. These may happen through email, text messages, or phone calls. Targeted scams are especially dangerous because they often use details that make the message seem personally relevant.
 
 ## Main Idea
+
 High-stakes requests should always be verified through a second trusted method before any action is taken. The more serious the request is, such as money transfers or account changes, the more important independent verification becomes.
 
 ## Common Red Flags
+
 - Requests for money or gift cards
 - Payroll or bank change requests
 - Text messages asking for account action
@@ -180,30 +189,43 @@ High-stakes requests should always be verified through a second trusted method b
 These warning signs are especially important when the request involves money, access, or sensitive records. Attackers often combine urgency with authority to make the target feel unable to say no or slow down.
 
 ## Targeted Phishing
+
 Targeted phishing uses personal details, familiar names, or work-related information to make a scam look more believable. Because it appears more customized, it can be harder to notice than generic phishing attempts.
 
 ## Smishing
+
 Smishing is phishing done through text messages. It often involves fake delivery alerts, account problems, or urgent login requests. Texts can feel more immediate than emails, which is why they are often used to pressure people into fast action.
 
 ## Vishing
+
 Vishing is phishing done through phone calls or voice messages. Attackers may pretend to be support staff, bank workers, or authority figures. A phone call can feel convincing because the scammer can respond in real time and create pressure during the conversation.
 
 ## High-Stakes Requests
+
 Requests involving money, account access, sensitive records, or urgent changes should never be trusted just because they look official. Even if the message appears to come from someone known, it should still be confirmed through an independent method.
 
 ## Safe Verification
+
 If a message asks for something important, verify it through a second trusted path, such as calling a real number or logging in through the official website or app. This breaks the attacker’s control over the situation and gives the user a chance to confirm what is real.
 
 ## Overall Takeaway
+
 Phishing defense is based on careful habits:
+
 - Slow down
+
 - Inspect the message
+
 - Verify independently
+
 - Avoid trusting urgency
+
 - Report suspicious activity
+
 - Protect accounts quickly if a mistake happens
 
 The most effective protection is not perfect guessing, but consistent safe behavior. When users build habits around checking and verifying, they become much harder for phishing attacks to manipulate.""",
+        
         "questions": [
             {
                 "question": "Business email compromise (BEC) is best described as:",
