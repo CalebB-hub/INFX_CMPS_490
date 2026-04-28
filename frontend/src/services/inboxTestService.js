@@ -2,10 +2,7 @@ import { getAccessToken, refreshAccessToken } from "./authService";
 
 const API_BASES = ["http://localhost:8000/api", "/api"];
 const EMAILS_PER_INBOX = 4;
-
-function getStorageKey(lessonId) {
-  return lessonId ? `generatedInboxTests:${lessonId}` : "generatedInboxTests:default";
-}
+const TEST_GRADES_KEY = "testGrades";
 
 async function fetchWithAuth(url, options = {}) {
   const token = getAccessToken();
@@ -47,67 +44,63 @@ export function parseGeneratedTestDescription(description) {
   }
 }
 
-export function getStoredInboxTests(lessonId) {
-  try {
-    const raw = localStorage.getItem(getStorageKey(lessonId));
-    const parsed = raw ? JSON.parse(raw) : [];
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
+function normalizeGeneratedEmail(email, lessonId, testId, index) {
+  const sender = String(email?.sender || "Unknown sender");
+  const subject = String(email?.subject || `Generated email ${index + 1}`);
+  const body = Array.isArray(email?.body) ? email.body : String(email?.body || "");
+  const isPhishing = Boolean(email?.isPhishing);
+  const emailId = String(email?.emailId ?? index + 1);
+
+  return {
+    lessonId: lessonId ? String(lessonId) : null,
+    testId: String(testId),
+    emailId,
+    title: subject,
+    description: JSON.stringify({
+      lessonId: lessonId ? String(lessonId) : null,
+      sender,
+      subject,
+      body,
+      isPhishing,
+      redFlags: Array.isArray(email?.redFlags) ? email.redFlags : [],
+    }),
+    dateTaken: email?.dateTaken || null,
+    questions: [
+      {
+        questionId: emailId,
+        questionText: "Is this email phishing?",
+        answer: isPhishing ? "Phishing" : "Phish Free",
+      },
+    ],
+  };
+}
+
+function buildGeneratedTests(payload, lessonId) {
+  const resolvedLessonId = payload?.lessonId ?? lessonId;
+  const resolvedTestId = payload?.testId;
+  const emails = Array.isArray(payload?.emails) ? payload.emails : [];
+
+  if (!resolvedLessonId || !resolvedTestId || emails.length === 0) {
     return [];
   }
-}
 
-function storeInboxTests(lessonId, tests) {
-  localStorage.setItem(getStorageKey(lessonId), JSON.stringify(tests));
-}
-
-function buildGeneratedTests(emails, lessonId) {
-  const scope = lessonId || "default";
-  const timestamp = new Date().toISOString();
-
-  return emails.slice(0, EMAILS_PER_INBOX).map((email, index) => {
-    const sender = String(email?.sender || "Unknown sender");
-    const subject = String(email?.subject || `Generated email ${index + 1}`);
-    const body = Array.isArray(email?.body) ? email.body : String(email?.body || "");
-    const isPhishing = Boolean(email?.is_phishing);
-
-    return {
-      testId: `generated-${scope}-${index + 1}`,
-      title: subject,
-      description: JSON.stringify({
-        lessonId: lessonId || null,
-        sender,
-        subject,
-        body,
-        isPhishing,
-        redFlags: Array.isArray(email?.red_flags) ? email.red_flags : [],
-      }),
-      dateTaken: timestamp,
-      questions: [
-        {
-          questionId: `generated-${scope}-${index + 1}-q1`,
-          questionText: "Is this email phishing?",
-          answer: isPhishing ? "Phishing" : "Not Phishing",
-        },
-      ],
-    };
-  });
+  return emails.slice(0, EMAILS_PER_INBOX).map((email, index) =>
+    normalizeGeneratedEmail(email, resolvedLessonId, resolvedTestId, index)
+  );
 }
 
 export async function ensureInboxTests(lessonId) {
-  const stored = getStoredInboxTests(lessonId);
-  if (stored.length >= EMAILS_PER_INBOX) {
-    return stored.slice(0, EMAILS_PER_INBOX);
+  if (!lessonId) {
+    throw new Error("A lesson is required before starting a test.");
   }
 
   let lastError = null;
-  const subject = lessonId ? `Lesson ${lessonId} phishing email test` : "Phishing email test";
 
   for (const base of API_BASES) {
     try {
       const response = await fetchWithAuth(`${base}/generate-test-emails/`, {
         method: "POST",
-        body: JSON.stringify({ subject }),
+        body: JSON.stringify({ lessonId: String(lessonId) }),
       });
       const raw = await response.text();
       const data = raw ? JSON.parse(raw) : {};
@@ -116,22 +109,128 @@ export async function ensureInboxTests(lessonId) {
         throw new Error(data.error || "Failed to generate test emails");
       }
 
-      const emails = Array.isArray(data.emails) ? data.emails : [];
-      if (emails.length === 0) {
-        throw new Error("No emails were generated.");
+      const generatedTests = buildGeneratedTests(data, lessonId);
+      if (generatedTests.length !== EMAILS_PER_INBOX) {
+        throw new Error("Expected 4 generated emails for this lesson test.");
       }
 
-      const generatedTests = buildGeneratedTests(emails, lessonId);
-      storeInboxTests(lessonId, generatedTests);
       return generatedTests;
     } catch (error) {
       lastError = error;
     }
   }
 
-  if (stored.length > 0) {
-    return stored.slice(0, EMAILS_PER_INBOX);
+  throw lastError || new Error("Failed to load inbox tests");
+}
+
+function readTestGrades() {
+  try {
+    const raw = localStorage.getItem(TEST_GRADES_KEY);
+    const parsed = raw ? JSON.parse(raw) : {};
+    return parsed && typeof parsed === "object" ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+function writeTestGrades(value) {
+  localStorage.setItem(TEST_GRADES_KEY, JSON.stringify(value));
+}
+
+export function getAllLessonTestGrades() {
+  return readTestGrades();
+}
+
+export function getLessonTestGrade(lessonId) {
+  if (!lessonId) return null;
+  const grades = readTestGrades();
+  return grades[String(lessonId)] || null;
+}
+
+export function saveLessonEmailAnswer({
+  lessonId,
+  testId,
+  emailId,
+  title,
+  sender,
+  subject,
+  selectedAnswer,
+  correctAnswer,
+  isCorrect,
+  phishingReason,
+}) {
+  if (!lessonId || !testId || !emailId) {
+    return null;
   }
 
-  throw lastError || new Error("Failed to generate inbox tests");
+  const key = String(lessonId);
+  const grades = readTestGrades();
+  const existingLesson = grades[key] || {};
+  const existingEmails = existingLesson.emails || {};
+  const submittedAt = new Date().toISOString();
+
+  grades[key] = {
+    lessonId: key,
+    testId: String(testId),
+    emails: {
+      ...existingEmails,
+      [String(emailId)]: {
+        emailId: String(emailId),
+        title: title || subject || "Generated email",
+        sender: sender || "Unknown sender",
+        subject: subject || title || "Generated email",
+        selectedAnswer,
+        correctAnswer,
+        isCorrect: Boolean(isCorrect),
+        phishingReason: phishingReason || "",
+        submittedAt,
+      },
+    },
+    finalScore: null,
+    finalPercent: null,
+    finalizedAt: null,
+  };
+
+  writeTestGrades(grades);
+  return grades[key];
+}
+
+export function finalizeLessonTest(lessonId) {
+  if (!lessonId) return null;
+  const key = String(lessonId);
+  const grades = readTestGrades();
+  const lessonGrade = grades[key];
+  const results = Object.values(lessonGrade?.emails || {});
+
+  if (results.length !== EMAILS_PER_INBOX) {
+    return null;
+  }
+
+  const finalScore = results.reduce(
+    (sum, result) => sum + (result?.isCorrect ? 1 : 0),
+    0
+  );
+  const finalPercent = Math.round((finalScore / EMAILS_PER_INBOX) * 100);
+
+  grades[key] = {
+    ...lessonGrade,
+    finalScore,
+    finalPercent,
+    finalizedAt: new Date().toISOString(),
+  };
+
+  writeTestGrades(grades);
+  return grades[key];
+}
+
+export function getLessonTestSummary(lessonId) {
+  const lessonGrade = getLessonTestGrade(lessonId);
+  const emailResults = Object.values(lessonGrade?.emails || {});
+  return {
+    lessonGrade,
+    emailResults,
+    answeredCount: emailResults.length,
+    totalEmails: EMAILS_PER_INBOX,
+    allAnswered: emailResults.length === EMAILS_PER_INBOX,
+  };
 }

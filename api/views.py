@@ -695,10 +695,15 @@ def learning_tests(request):
     Returns tests with email content and multiple-choice questions
     for the current user.
     """
+    lesson_id = request.query_params.get('lessonId')
     tests = Test.objects.filter(user_id=request.user).order_by('-date_taken')
     payload = []
 
     for test in tests:
+        meta = _safe_json_loads(test.description) or {}
+        if lesson_id and str(meta.get('lessonId')) != str(lesson_id):
+            continue
+
         questions = Question.objects.filter(test_id=test).order_by('question_id')
         questions_payload = [
             {
@@ -714,6 +719,7 @@ def learning_tests(request):
                 'testId': test.test_id,
                 'title': test.title,
                 'description': test.description,
+                'metadata': meta if isinstance(meta, dict) else {},
                 'dateTaken': test.date_taken.isoformat() if test.date_taken else None,
                 'score': float(test.score) if test.score is not None else None,
                 'questions': questions_payload,
@@ -729,24 +735,160 @@ def learning_tests(request):
     )
 
 
+def _lesson_inbox_test_metadata(lesson):
+    return {
+        'kind': 'lesson_inbox_test',
+        'lessonId': lesson.lesson_id,
+        'lessonTitle': lesson.title,
+        'emailCount': 4,
+    }
+
+
+def _find_lesson_inbox_test(user, lesson):
+    tests = (
+        Test.objects
+        .filter(user_id=user, title=f'Lesson {lesson.lesson_id} Inbox Test')
+        .order_by('test_id')
+    )
+
+    for test in tests:
+        meta = _safe_json_loads(test.description) or {}
+        if (
+            isinstance(meta, dict)
+            and meta.get('kind') == 'lesson_inbox_test'
+            and str(meta.get('lessonId')) == str(lesson.lesson_id)
+        ):
+            return test
+
+    return None
+
+
+def _normalize_generated_email(item, index):
+    if not isinstance(item, dict):
+        return None
+
+    sender = str(item.get('sender') or 'Unknown sender').strip() or 'Unknown sender'
+    subject = str(item.get('subject') or f'Generated email {index + 1}').strip()
+    body = item.get('body', '')
+    if isinstance(body, list):
+        body_value = [str(part) for part in body]
+    else:
+        body_value = str(body or '')
+
+    is_phishing = bool(item.get('is_phishing'))
+    red_flags = item.get('red_flags')
+    if not isinstance(red_flags, list):
+        red_flags = []
+
+    return {
+        'sender': sender,
+        'subject': subject,
+        'body': body_value,
+        'isPhishing': is_phishing,
+        'redFlags': [str(flag) for flag in red_flags],
+    }
+
+
+def _serialize_lesson_inbox_email(question):
+    payload = _safe_json_loads(question.question_text) or {}
+    if not isinstance(payload, dict):
+        payload = {}
+
+    return {
+        'emailId': question.question_id,
+        'sender': str(payload.get('sender') or 'Unknown sender'),
+        'subject': str(payload.get('subject') or 'Generated email'),
+        'body': payload.get('body') if payload.get('body') is not None else '',
+        'isPhishing': str(question.answer).strip().lower() == 'phishing',
+        'redFlags': payload.get('redFlags') if isinstance(payload.get('redFlags'), list) else [],
+        'dateTaken': question.test_id.date_taken.isoformat() if question.test_id.date_taken else None,
+    }
+
+
+def _serialize_lesson_inbox_test(test, lesson):
+    questions = Question.objects.filter(test_id=test).order_by('question_id')
+    return {
+        'lessonId': lesson.lesson_id,
+        'testId': test.test_id,
+        'emails': [_serialize_lesson_inbox_email(question) for question in questions],
+    }
+
+
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def generate_test_emails(request):
     """
-    Send a prompt to Gemini and return generated text.
-    Body: { "prompt": string }
+    Generate or return the lesson-specific inbox test emails.
+    Body: { "lessonId": number }
     """
-    subject = request.data.get('subject')
-
-    if not subject or not str(subject).strip():
+    lesson_id = request.data.get('lessonId')
+    if lesson_id is None or str(lesson_id).strip() == '':
         return Response(
-            {'error': 'subject is required'},
+            {'error': 'lessonId is required'},
             status=status.HTTP_400_BAD_REQUEST,
         )
-    
+
+    lesson = get_object_or_404(Lesson, lesson_id=lesson_id)
+    inbox_test = _find_lesson_inbox_test(request.user, lesson)
+
+    if inbox_test is None:
+        inbox_test = Test.objects.create(
+            title=f'Lesson {lesson.lesson_id} Inbox Test',
+            description=json.dumps(_lesson_inbox_test_metadata(lesson)),
+            score=0,
+            date_taken=datetime.now(dt_timezone.utc),
+            user_id=request.user,
+        )
+    else:
+        inbox_test.description = json.dumps(_lesson_inbox_test_metadata(lesson))
+        inbox_test.date_taken = inbox_test.date_taken or datetime.now(dt_timezone.utc)
+        inbox_test.save(update_fields=['description', 'date_taken'])
+
+    existing_questions = Question.objects.filter(test_id=inbox_test).order_by('question_id')
+    if existing_questions.count() == 4:
+        return Response(
+            _serialize_lesson_inbox_test(inbox_test, lesson),
+            status=status.HTTP_200_OK,
+        )
+
     try:
-        emails = _clean_response(_generate_emails(str(subject).strip()))
-        return Response({'emails': emails}, status=status.HTTP_200_OK)
+        subject = f'Lesson {lesson.lesson_id} phishing email test'
+        generated = _generate_emails(subject)
+        if isinstance(generated, Response):
+            return generated
+
+        emails = _clean_response(generated)
+        normalized_emails = [
+            _normalize_generated_email(item, index)
+            for index, item in enumerate(emails if isinstance(emails, list) else [])
+        ]
+        normalized_emails = [item for item in normalized_emails if item is not None][:4]
+
+        if len(normalized_emails) != 4:
+            raise ValueError('Expected 4 generated emails.')
+
+        existing_questions.delete()
+        for email in normalized_emails:
+            Question.objects.create(
+                test_id=inbox_test,
+                question_text=json.dumps(
+                    {
+                        'sender': email['sender'],
+                        'subject': email['subject'],
+                        'body': email['body'],
+                        'redFlags': email['redFlags'],
+                    }
+                ),
+                question_type='email',
+                answer='Phishing' if email['isPhishing'] else 'Phish Free',
+                response='[]',
+                score=0,
+            )
+
+        return Response(
+            _serialize_lesson_inbox_test(inbox_test, lesson),
+            status=status.HTTP_200_OK,
+        )
     except Exception as e:
         return Response(
             {'error': f'Failed to generate emails: {str(e)}'},

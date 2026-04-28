@@ -184,17 +184,7 @@ export default function Home() {
     try {
       const raw = localStorage.getItem("testGrades");
       const parsed = raw ? JSON.parse(raw) : {};
-      return Object.values(parsed || {}).reduce((acc, grade) => {
-        if (grade?.lessonId === null || grade?.lessonId === undefined) {
-          return acc;
-        }
-        const key = String(grade.lessonId);
-        if (!acc[key]) {
-          acc[key] = [];
-        }
-        acc[key].push(grade);
-        return acc;
-      }, {});
+      return parsed && typeof parsed === "object" ? parsed : {};
     } catch {
       return {};
     }
@@ -205,8 +195,8 @@ export default function Home() {
       lessons.map((lesson) => {
         const lessonId = String(lesson.lessonId);
         const quizGrade = quizGradesByLessonId[lessonId] || null;
-        const testGrades = testGradesByLessonId[lessonId] || [];
-        const completedTests = testGrades.length;
+        const testGrade = testGradesByLessonId[lessonId] || null;
+        const completedTests = Object.keys(testGrade?.emails || {}).length;
         const isCompleted = Boolean(quizGrade) && completedTests >= 4;
 
         return {
@@ -228,8 +218,8 @@ export default function Home() {
       const raw = localStorage.getItem("testGrades");
       const parsed = raw ? JSON.parse(raw) : {};
       const percents = Object.values(parsed || {})
-        .filter(Boolean)
-        .map((grade) => Number(grade.percent))
+        .filter((grade) => grade && grade.finalPercent !== null && grade.finalPercent !== undefined)
+        .map((grade) => Number(grade.finalPercent))
         .filter((percent) => Number.isFinite(percent));
 
       if (percents.length === 0) {
@@ -246,19 +236,21 @@ export default function Home() {
     try {
       const raw = localStorage.getItem("testGrades");
       const parsed = raw ? JSON.parse(raw) : {};
-      const results = Object.values(parsed || {}).filter(Boolean);
+      const results = Object.values(parsed || {}).filter(
+        (grade) => grade && grade.finalPercent !== null && grade.finalPercent !== undefined
+      );
 
       if (results.length === 0) {
         return [];
       }
 
       const average =
-        results.reduce((sum, result) => sum + (Number(result.percent) || 0), 0) /
+        results.reduce((sum, result) => sum + (Number(result.finalPercent) || 0), 0) /
         results.length;
       const latestSubmission = results.reduce((latest, result) => {
-        if (!latest) return result.submittedAt;
-        return new Date(result.submittedAt || 0) > new Date(latest || 0)
-          ? result.submittedAt
+        if (!latest) return result.finalizedAt || result.submittedAt;
+        return new Date(result.finalizedAt || result.submittedAt || 0) > new Date(latest || 0)
+          ? result.finalizedAt || result.submittedAt
           : latest;
       }, null);
 

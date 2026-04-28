@@ -6,13 +6,6 @@ import { getAccessToken, refreshAccessToken } from "../services/authService"
 
 const API_BASES = ["http://localhost:8000/api", "/api"]
 
-const TEST_ID_BY_LESSON_ID = {
-  1: "mock-1",
-  2: "mock-2",
-  3: "mock-3",
-  4: "mock-4",
-}
-
 async function fetchWithAuth(url) {
   const token = getAccessToken()
   if (!token) {
@@ -115,7 +108,7 @@ export default function Grades() {
         const quiz = quizByLessonId.get(lessonId)
         const quizId = quiz?.id
         const quizGrade = quizId ? gradesByQuizId[quizId] : null
-        const testGrade = testGrades[TEST_ID_BY_LESSON_ID[lessonId]]
+        const testGrade = testGrades[lessonId] || null
 
         return {
           lesson,
@@ -199,12 +192,12 @@ export default function Grades() {
                           Email simulation question
                         </div>
                         <div style={{ fontSize: 24, fontWeight: 800, marginTop: 10 }}>
-                          {testGrade ? `${testGrade.percent}%` : "--"}
+                          {testGrade ? `${testGrade.finalPercent ?? 0}%` : "--"}
                         </div>
                         <div className="muted" style={{ marginTop: 4 }}>
                           {testGrade
-                            ? testGrade.submittedAt
-                              ? new Date(testGrade.submittedAt).toLocaleDateString()
+                            ? testGrade.finalizedAt
+                              ? new Date(testGrade.finalizedAt).toLocaleDateString()
                               : "Submitted"
                             : "Not taken yet"}
                         </div>

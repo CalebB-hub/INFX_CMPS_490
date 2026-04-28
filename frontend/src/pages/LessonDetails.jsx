@@ -59,6 +59,17 @@ export default function LessonDetails() {
   const [quiz, setQuiz] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
+  const quizCompletedForLesson = useMemo(() => {
+    try {
+      const raw = localStorage.getItem("quizGrades")
+      const parsed = raw ? JSON.parse(raw) : {}
+      return Object.values(parsed).find(
+        (grade) => grade && String(grade.lessonId) === String(lessonId)
+      )
+    } catch {
+      return null
+    }
+  }, [lessonId])
 
   useEffect(() => {
     let mounted = true
@@ -120,11 +131,18 @@ export default function LessonDetails() {
               )}
             </div>
 
-            {quiz && (
-              <div style={{ marginTop: 16, display: "flex", justifyContent: "flex-end" }}>
-                <Link className="btn" to={`/learning/quizzes/${quiz.id}?lessonId=${lesson.lessonId}`}>
-                  Take Quiz
-                </Link>
+            {(quiz || quizCompletedForLesson) && (
+              <div style={{ marginTop: 16, display: "flex", justifyContent: "flex-end", gap: 8, flexWrap: "wrap" }}>
+                {quiz && (
+                  <Link className="btn" to={`/learning/quizzes/${quiz.id}?lessonId=${lesson.lessonId}`}>
+                    Take Quiz
+                  </Link>
+                )}
+                {quizCompletedForLesson && (
+                  <Link className="btn topnav__profileBtn" to={`/inbox?lessonId=${lesson.lessonId}`}>
+                    Take Test
+                  </Link>
+                )}
               </div>
             )}
           </>

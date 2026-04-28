@@ -4,12 +4,6 @@ import TopNav from "../components/TopNav"
 import { getAccessToken, refreshAccessToken } from "../services/authService"
 
 const API_BASES = ["http://localhost:8000/api", "/api"]
-const TEST_ID_BY_LESSON_ID = {
-  1: "mock-1",
-  2: "mock-2",
-  3: "mock-3",
-  4: "mock-4",
-}
 
 async function fetchWithAuth(url) {
   const token = getAccessToken()
@@ -135,8 +129,7 @@ export default function Lessons() {
                         try {
                           const raw = localStorage.getItem("testGrades")
                           const parsed = raw ? JSON.parse(raw) : {}
-                          testGradeForLesson =
-                            parsed[TEST_ID_BY_LESSON_ID[String(lesson.lessonId)]]
+                          testGradeForLesson = parsed[String(lesson.lessonId)] || null
                         } catch (e) {
                           testGradeForLesson = null
                         }
@@ -147,7 +140,7 @@ export default function Lessons() {
                         )
                         const passedTestForLesson = Boolean(
                           testGradeForLesson &&
-                            Number(testGradeForLesson.percent) > 70
+                            Number(testGradeForLesson.finalPercent) > 70
                         )
 
                         return (
@@ -182,7 +175,7 @@ export default function Lessons() {
                                 {passedQuizForLesson && (
                                   <Link
                                     className="btn topnav__profileBtn"
-                                    to="/inbox"
+                                    to={`/inbox?lessonId=${lesson.lessonId}`}
                                     aria-label="Go to inbox"
                                   >
                                     Take Test

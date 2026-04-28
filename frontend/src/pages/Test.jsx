@@ -3,14 +3,15 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import TopNav from "../components/TopNav";
 import {
   ensureInboxTests,
+  getLessonTestGrade,
   parseGeneratedTestDescription,
+  saveLessonEmailAnswer,
 } from "../services/inboxTestService";
 
 export default function Test() {
   const location = useLocation();
   const navigate = useNavigate();
   const [tests, setTests] = useState([]);
-  const [activeTestId, setActiveTestId] = useState(null);
   const [loadingTests, setLoadingTests] = useState(true);
   const [error, setError] = useState("");
   const [verdict, setVerdict] = useState("");
@@ -30,6 +31,12 @@ export default function Test() {
     return value ? String(value) : null;
   }, [location.search]);
 
+  const emailIdParam = useMemo(() => {
+    const params = new URLSearchParams(location.search);
+    const value = params.get("emailId");
+    return value ? String(value) : null;
+  }, [location.search]);
+
   useEffect(() => {
     let mounted = true;
     setLoadingTests(true);
@@ -39,14 +46,6 @@ export default function Test() {
       .then((data) => {
         if (!mounted) return;
         setTests(data);
-        if (testIdParam) {
-          const matchingTest = data.find(
-            (test) => String(test.testId) === String(testIdParam)
-          );
-          setActiveTestId(matchingTest?.testId || data[0]?.testId || null);
-        } else {
-          setActiveTestId(data[0]?.testId || null);
-        }
       })
       .catch((err) => {
         if (!mounted) return;
@@ -59,29 +58,27 @@ export default function Test() {
     return () => {
       mounted = false;
     };
-  }, [lessonIdParam, testIdParam]);
+  }, [lessonIdParam]);
 
-  useEffect(() => {
-    if (tests.length === 0) return;
-    if (activeTestId) return;
-    setActiveTestId(tests[0]?.testId || null);
-  }, [tests, activeTestId]);
-
-  const activeTest = useMemo(
-    () => tests.find((test) => test.testId === activeTestId) || null,
-    [tests, activeTestId]
-  );
+  const activeTest = useMemo(() => {
+    return (
+      tests.find(
+        (test) =>
+          String(test.testId) === String(testIdParam) &&
+          String(test.emailId || test.questions?.[0]?.questionId) === String(emailIdParam)
+      ) || null
+    );
+  }, [emailIdParam, testIdParam, tests]);
 
   const emailParts = useMemo(() => {
-    const baseTest = activeTest || tests[0];
-    if (!baseTest) return null;
+    if (!activeTest) return null;
     const fallback = {
-      subject: baseTest.title || "Email test",
+      subject: activeTest.title || "Email test",
       sender: "Unknown sender",
       body: "",
     };
-    if (!baseTest.description) return fallback;
-    const parsed = parseGeneratedTestDescription(baseTest.description);
+    if (!activeTest.description) return fallback;
+    const parsed = parseGeneratedTestDescription(activeTest.description);
     if (parsed) {
       return {
         subject: parsed.subject || fallback.subject,
@@ -91,9 +88,31 @@ export default function Test() {
     }
     return {
       ...fallback,
-      body: baseTest.description,
+      body: activeTest.description,
     };
-  }, [activeTest, tests]);
+  }, [activeTest]);
+
+  useEffect(() => {
+    if (!lessonIdParam || !activeTest) return;
+    const lessonGrade = getLessonTestGrade(lessonIdParam);
+    const savedAnswer =
+      lessonGrade?.emails?.[
+        String(activeTest.emailId || activeTest.questions?.[0]?.questionId)
+      ];
+
+    if (!savedAnswer) {
+      setVerdict("");
+      setPhishingReason("");
+      setSubmitted(false);
+      setStatusMessage("");
+      return;
+    }
+
+    setVerdict(savedAnswer.selectedAnswer || "");
+    setPhishingReason(savedAnswer.phishingReason || "");
+    setSubmitted(false);
+    setStatusMessage("Saved answer loaded.");
+  }, [activeTest, lessonIdParam]);
 
   const phishingReasonOptions = [
     "The message creates urgency and pushes you to act immediately.",
@@ -119,7 +138,7 @@ export default function Test() {
   }
 
   function handleSubmit() {
-    if (!activeTest) {
+    if (!activeTest || !lessonIdParam) {
       setStatusMessage("No test loaded.");
       return;
     }
@@ -129,39 +148,27 @@ export default function Test() {
     }
 
     const questions = activeTest.questions || [];
-    const expected = String(questions[0]?.answer ?? "").toLowerCase();
-    const selected = verdict.toLowerCase();
-    const isCorrect = expected ? expected === selected : false;
-    const correctCount = isCorrect ? 1 : 0;
-    const total = expected ? 1 : 0;
-    const percent = total > 0 ? Math.round((correctCount / total) * 100) : 0;
+    const correctAnswer = String(questions[0]?.answer ?? "");
+    const selectedAnswer = verdict;
+    const isCorrect =
+      correctAnswer.trim().toLowerCase() === selectedAnswer.trim().toLowerCase();
 
-    const payload = {
-      testId: activeTest.testId,
+    saveLessonEmailAnswer({
       lessonId: lessonIdParam,
+      testId: activeTest.testId,
+      emailId: activeTest.emailId || questions[0]?.questionId,
       title: activeTest.title,
-      verdict,
-      phishingReason: verdict === "Phishing" ? phishingReason : "",
-      score: correctCount,
-      total,
-      percent,
-      submittedAt: new Date().toISOString(),
-    };
-
-    try {
-      const raw = localStorage.getItem("testGrades");
-      const existing = raw ? JSON.parse(raw) : {};
-      localStorage.setItem(
-        "testGrades",
-        JSON.stringify({ ...existing, [activeTest.testId]: payload })
-      );
-    } catch {
-      // ignore storage errors
-    }
+      sender: emailParts?.sender,
+      subject: emailParts?.subject,
+      selectedAnswer,
+      correctAnswer,
+      isCorrect,
+      phishingReason: selectedAnswer === "Phishing" ? phishingReason : "",
+    });
 
     setSubmitted(true);
-    setStatusMessage("Responses saved.");
-    navigate(lessonIdParam ? `/inbox?lessonId=${lessonIdParam}` : "/inbox");
+    setStatusMessage("Response saved.");
+    navigate(`/inbox?lessonId=${lessonIdParam}`);
   }
 
   return (
@@ -180,7 +187,7 @@ export default function Test() {
             {loadingTests && <div className="muted">Loading test email...</div>}
             {!loadingTests && error && <div className="muted">{error}</div>}
             {!loadingTests && !error && !activeTest && (
-              <div className="muted">No tests available yet.</div>
+              <div className="muted">No test email was found for this lesson.</div>
             )}
             {!loadingTests && !error && activeTest && emailParts && (
               <>
@@ -219,7 +226,6 @@ export default function Test() {
                       key={option}
                       type="button"
                       className="btn topnav__profileBtn"
-                      disabled={submitted}
                       onClick={() => handleVerdictSelect(option)}
                       style={{
                         minWidth: 140,

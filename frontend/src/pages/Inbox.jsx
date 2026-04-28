@@ -3,6 +3,8 @@ import { useLocation, useNavigate } from "react-router-dom";
 import TopNav from "../components/TopNav";
 import {
   ensureInboxTests,
+  finalizeLessonTest,
+  getLessonTestSummary,
   parseGeneratedTestDescription,
 } from "../services/inboxTestService";
 
@@ -37,6 +39,7 @@ export default function Inbox() {
             id: index + 1,
             lessonId: meta.lessonId ? String(meta.lessonId) : lessonId,
             testId: test.testId,
+            emailId: test.emailId || test.questions?.[0]?.questionId,
             from: meta.sender || "Unknown sender",
             subject: meta.subject || test.title || "Generated email",
             preview:
@@ -66,20 +69,19 @@ export default function Inbox() {
     };
   }, [lessonId]);
 
-  const completedTests = useMemo(() => {
-    try {
-      const raw = localStorage.getItem("testGrades");
-      const parsed = raw ? JSON.parse(raw) : {};
-      return parsed && typeof parsed === "object" ? parsed : {};
-    } catch {
-      return {};
-    }
-  }, []);
+  const lessonSummary = useMemo(() => getLessonTestSummary(lessonId), [lessonId]);
+  const completedEmails = lessonSummary.lessonGrade?.emails || {};
+  const completedCount = lessonSummary.answeredCount;
+  const allEmailsAnswered = emails.length > 0 && lessonSummary.allAnswered;
 
-  const completedCount = emails.filter(
-    (email) => email.testId && completedTests[email.testId]
-  ).length;
-  const allEmailsAnswered = emails.length > 0 && completedCount === emails.length;
+  function handleSubmitTest() {
+    const finalized = finalizeLessonTest(lessonId);
+    if (!finalized) {
+      setError("Answer all 4 email questions before submitting the test.");
+      return;
+    }
+    navigate(`/test-grade?lessonId=${lessonId}`);
+  }
 
   return (
     <div>
@@ -111,16 +113,12 @@ export default function Inbox() {
             {!loading &&
               !error &&
               emails.map((email) => {
-                const isCompleted = Boolean(
-                  email.testId && completedTests[email.testId]
-                );
-                const href = email.lessonId
-                  ? `/test?testId=${email.testId}&lessonId=${email.lessonId}`
-                  : `/test?testId=${email.testId}`;
+                const isCompleted = Boolean(completedEmails[String(email.emailId)]);
+                const href = `/test?lessonId=${email.lessonId}&testId=${email.testId}&emailId=${email.emailId}`;
 
                 return (
                   <article
-                    key={email.id}
+                    key={email.emailId || email.id}
                     className="inbox-message"
                     role="listitem"
                     onClick={() => navigate(href)}
@@ -166,7 +164,7 @@ export default function Inbox() {
             <button
               className="btn"
               type="button"
-              onClick={() => navigate("/test-grade")}
+              onClick={handleSubmitTest}
             >
               Submit Test
             </button>
