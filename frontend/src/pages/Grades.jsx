@@ -6,13 +6,6 @@ import { getAccessToken, refreshAccessToken } from "../services/authService"
 
 const API_BASES = ["http://localhost:8000/api", "/api"]
 
-const TEST_ID_BY_LESSON_ID = {
-  1: "mock-1",
-  2: "mock-2",
-  3: "mock-3",
-  4: "mock-4",
-}
-
 async function fetchWithAuth(url) {
   const token = getAccessToken()
   if (!token) {
@@ -115,7 +108,7 @@ export default function Grades() {
         const quiz = quizByLessonId.get(lessonId)
         const quizId = quiz?.id
         const quizGrade = quizId ? gradesByQuizId[quizId] : null
-        const testGrade = testGrades[TEST_ID_BY_LESSON_ID[lessonId]]
+        const testGrade = testGrades[lessonId] || null
 
         return {
           lesson,
@@ -131,10 +124,45 @@ export default function Grades() {
     <div>
       <TopNav />
       <main className="page">
+        <style>
+          {`
+            @keyframes grades-loader-spin {
+              from { transform: rotate(0deg); }
+              to { transform: rotate(360deg); }
+            }
+          `}
+        </style>
         <h2>Grades</h2>
         <p className="muted">Your quiz and test results by lesson.</p>
 
-        {loading && <p className="muted">Loading grades...</p>}
+        {loading && (
+          <div className="card" style={{ minHeight: 260, display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 14,
+              }}
+            >
+              <div
+                aria-hidden="true"
+                style={{
+                  width: 28,
+                  height: 28,
+                  borderRadius: "50%",
+                  border: "3px solid rgba(0,0,0,0.12)",
+                  borderTopColor: "var(--accent)",
+                  animation: "grades-loader-spin 0.9s linear infinite",
+                }}
+              />
+              <div className="muted" style={{ fontWeight: 600 }}>
+                Loading Grades...
+              </div>
+            </div>
+          </div>
+        )}
         {error && <p className="muted">{error}</p>}
 
         {!loading && !error && (
@@ -168,7 +196,7 @@ export default function Grades() {
                     >
                       <div
                         style={{
-                          border: "1px solid rgba(0,0,0,0.08)",
+                          border: "1px solid rgba(255,255,255,0.18)",
                           borderRadius: 12,
                           padding: 14,
                         }}
@@ -189,7 +217,7 @@ export default function Grades() {
 
                       <div
                         style={{
-                          border: "1px solid rgba(0,0,0,0.08)",
+                          border: "1px solid rgba(255,255,255,0.18)",
                           borderRadius: 12,
                           padding: 14,
                         }}
@@ -199,12 +227,12 @@ export default function Grades() {
                           Email simulation question
                         </div>
                         <div style={{ fontSize: 24, fontWeight: 800, marginTop: 10 }}>
-                          {testGrade ? `${testGrade.percent}%` : "--"}
+                          {testGrade ? `${testGrade.finalPercent ?? 0}%` : "--"}
                         </div>
                         <div className="muted" style={{ marginTop: 4 }}>
                           {testGrade
-                            ? testGrade.submittedAt
-                              ? new Date(testGrade.submittedAt).toLocaleDateString()
+                            ? testGrade.finalizedAt
+                              ? new Date(testGrade.finalizedAt).toLocaleDateString()
                               : "Submitted"
                             : "Not taken yet"}
                         </div>

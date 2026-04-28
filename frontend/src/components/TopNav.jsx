@@ -110,14 +110,14 @@ export default function TopNav() {
 
           {profileOpen && (
             <div className="topnav__dropdown" role="menu">
-              <button className="topnav__dropdownItem" role="menuitem" onClick={handleLogout}>
-                Logout
-              </button>
               <button className="topnav__dropdownItem" role="menuitem" onClick={goToProfile}>
                 My Profile
               </button>
               <button className="topnav__dropdownItem" role="menuitem" onClick={goToSettings}>
                 Settings
+              </button>
+              <button className="topnav__dropdownItem" role="menuitem" onClick={handleLogout}>
+                Logout
               </button>
             </div>
           )}
