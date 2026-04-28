@@ -6,7 +6,7 @@ from rest_framework.test import APITestCase, APIClient
 from django.urls import reverse
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from .models import Role, Company, User, Test as TestModel, Module, Lesson, Assignment
+from .models import Role, Company, User, Test as TestModel, Module, Lesson, Assignment, LessonScore
 from .services import (
     user_service,
     company_service,
@@ -330,11 +330,15 @@ class DashboardEndpointTests(APITestCase):
         # Create lessons
         self.lesson1 = Lesson.objects.create(
             title='Intro to Variables',
-            score=88.0,
-            user_id=self.user,
+            choices='[]',
             questions='[]',
+            answers='[]',
             lesson_material='Material here',
-            completed_at=timezone.now() - timedelta(days=1),
+        )
+        self.lesson_score1 = LessonScore.objects.create(
+            user=self.user,
+            lesson=self.lesson1,
+            score=88.0,
         )
 
     def test_dashboard_me_success(self):

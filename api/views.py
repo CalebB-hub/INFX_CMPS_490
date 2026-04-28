@@ -433,10 +433,10 @@ def dashboard_me(request):
         'test_id', 'title', 'score', 'date_taken'
     )
     
-    # Get lessons progress
-    user_lessons = Lesson.objects.filter(user_id=user)
-    lesson_stats = user_lessons.aggregate(
-        total_lessons=Count('lesson_id'),
+    # Get lessons progress from user-specific score records
+    user_lesson_scores = LessonScore.objects.filter(user=user)
+    lesson_stats = user_lesson_scores.aggregate(
+        total_lessons=Count('lesson_id', distinct=True),
         average_score=Avg('score')
     )
     

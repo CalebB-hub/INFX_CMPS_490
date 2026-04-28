@@ -1,11 +1,9 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import TopNav from "../components/TopNav";
 import { useNavigate } from "react-router-dom";
 import { getAccessToken, logout, refreshAccessToken } from "../services/authService";
 
 const API_BASE = "http://localhost:8000/api";
-const TEST_IDS = ["mock-1", "mock-2", "mock-3", "mock-4"];
-
 async function requestDashboard(token) {
   const response = await fetch(`${API_BASE}/dashboard/me`, {
     headers: {
@@ -77,6 +75,31 @@ async function fetchDashboard() {
   }
 }
 
+async function loadDashboardAndLessons(token) {
+  try {
+    const [dashboardData, lessonsData] = await Promise.all([
+      requestDashboard(token),
+      requestLessons(token),
+    ]);
+    return { dashboardData, lessonsData, dashboardError: "" };
+  } catch (err) {
+    if (
+      err.message === "Authentication credentials were not provided." ||
+      err.message.includes("Given token not valid") ||
+      err.message.includes("Token is invalid or expired")
+    ) {
+      throw err;
+    }
+
+    const lessonsData = await requestLessons(token);
+    return {
+      dashboardData: null,
+      lessonsData,
+      dashboardError: err.message || "Failed to load dashboard.",
+    };
+  }
+}
+
 export default function Home() {
   const navigate = useNavigate();
   const [dashboard, setDashboard] = useState(null);
@@ -96,12 +119,11 @@ export default function Home() {
 
         let dashboardData;
         let lessonsData;
+        let dashboardError = "";
 
         try {
-          [dashboardData, lessonsData] = await Promise.all([
-            requestDashboard(token),
-            requestLessons(token),
-          ]);
+          ({ dashboardData, lessonsData, dashboardError } =
+            await loadDashboardAndLessons(token));
         } catch (err) {
           if (
             err.message === "Authentication credentials were not provided." ||
@@ -109,10 +131,8 @@ export default function Home() {
             err.message.includes("Token is invalid or expired")
           ) {
             token = await refreshAccessToken();
-            [dashboardData, lessonsData] = await Promise.all([
-              requestDashboard(token),
-              requestLessons(token),
-            ]);
+            ({ dashboardData, lessonsData, dashboardError } =
+              await loadDashboardAndLessons(token));
           } else {
             throw err;
           }
@@ -121,7 +141,7 @@ export default function Home() {
         if (mounted) {
           setDashboard(dashboardData);
           setLessons(Array.isArray(lessonsData?.lessons) ? lessonsData.lessons : []);
-          setError("");
+          setError(dashboardError);
         }
       } catch (err) {
         if (mounted) {
@@ -145,42 +165,69 @@ export default function Home() {
     };
   }, [navigate]);
 
-  const completedLessonCount = (() => {
+  const quizGradesByLessonId = useMemo(() => {
     try {
       const raw = localStorage.getItem("quizGrades");
       const parsed = raw ? JSON.parse(raw) : {};
-      const completedLessonIds = new Set(
-        Object.values(parsed || {})
-          .map((grade) => grade?.lessonId)
-          .filter(Boolean)
-          .map((lessonId) => String(lessonId))
-      );
-      return completedLessonIds.size;
+      return Object.values(parsed || {}).reduce((acc, grade) => {
+        if (grade?.lessonId !== null && grade?.lessonId !== undefined) {
+          acc[String(grade.lessonId)] = grade;
+        }
+        return acc;
+      }, {});
     } catch {
-      return 0;
+      return {};
     }
-  })();
+  }, []);
 
-  const completedLessonIds = (() => {
+  const testGradesByLessonId = useMemo(() => {
     try {
-      const raw = localStorage.getItem("quizGrades");
+      const raw = localStorage.getItem("testGrades");
       const parsed = raw ? JSON.parse(raw) : {};
-      return new Set(
-        Object.values(parsed || {})
-          .map((grade) => grade?.lessonId)
-          .filter(Boolean)
-          .map((lessonId) => String(lessonId))
-      );
+      return Object.values(parsed || {}).reduce((acc, grade) => {
+        if (grade?.lessonId === null || grade?.lessonId === undefined) {
+          return acc;
+        }
+        const key = String(grade.lessonId);
+        if (!acc[key]) {
+          acc[key] = [];
+        }
+        acc[key].push(grade);
+        return acc;
+      }, {});
     } catch {
-      return new Set();
+      return {};
     }
-  })();
+  }, []);
+
+  const lessonProgress = useMemo(
+    () =>
+      lessons.map((lesson) => {
+        const lessonId = String(lesson.lessonId);
+        const quizGrade = quizGradesByLessonId[lessonId] || null;
+        const testGrades = testGradesByLessonId[lessonId] || [];
+        const completedTests = testGrades.length;
+        const isCompleted = Boolean(quizGrade) && completedTests >= 4;
+
+        return {
+          id: `lesson-${lesson.lessonId}`,
+          title: lesson.title,
+          status: isCompleted ? "Completed" : "Not completed",
+          isCompleted,
+        };
+      }),
+    [lessons, quizGradesByLessonId, testGradesByLessonId]
+  );
+
+  const completedLessonCount = lessonProgress.filter(
+    (lesson) => lesson.isCompleted
+  ).length;
 
   const averageTestPercent = (() => {
     try {
       const raw = localStorage.getItem("testGrades");
       const parsed = raw ? JSON.parse(raw) : {};
-      const percents = TEST_IDS.map((testId) => parsed?.[testId])
+      const percents = Object.values(parsed || {})
         .filter(Boolean)
         .map((grade) => Number(grade.percent))
         .filter((percent) => Number.isFinite(percent));
@@ -195,13 +242,11 @@ export default function Home() {
     }
   })();
 
-  const assignedLessonCount = lessons.length;
-
   const simulationHistory = (() => {
     try {
       const raw = localStorage.getItem("testGrades");
       const parsed = raw ? JSON.parse(raw) : {};
-      const results = TEST_IDS.map((testId) => parsed?.[testId]).filter(Boolean);
+      const results = Object.values(parsed || {}).filter(Boolean);
 
       if (results.length === 0) {
         return [];
@@ -235,16 +280,8 @@ export default function Home() {
   const stats = {
     phishingScore: Math.round(averageTestPercent),
     lessonsCompleted: completedLessonCount,
-    lessonsTotal: assignedLessonCount,
+    lessonsTotal: lessons.length,
   };
-
-  const assignedLessons = lessons
-    .filter((lesson) => !completedLessonIds.has(String(lesson.lessonId)))
-    .map((lesson) => ({
-      id: `lesson-${lesson.lessonId}`,
-      title: lesson.title,
-      status: "Not completed",
-    }));
 
   return (
     <div>
@@ -281,10 +318,10 @@ export default function Home() {
             </div>
 
             <div style={{ marginTop: 10 }}>
-              {assignedLessons.length === 0 ? (
+              {lessonProgress.length === 0 ? (
                 <p className="muted" style={{ margin: 0 }}>No assignments available.</p>
               ) : (
-                assignedLessons.map((lesson) => (
+                lessonProgress.map((lesson) => (
                   <div
                     key={lesson.id}
                     style={{

@@ -25,7 +25,7 @@ def _generate_emails(subject):
     client = genai.Client(api_key=api_key)
 
     prompt = f"""
-    A user is about to take a test on how to spot phishing emails scams. We need the create 15 fake emails to use for this test with the following criteria:
+    A user is about to take a test on how to spot phishing emails scams. We need the create 4 fake emails to use for this test with the following criteria:
 
     For both normal and phishing emails include:
     1) The sender's email address
@@ -46,7 +46,7 @@ def _generate_emails(subject):
     Return your response as a JSON array with no additional text or markdown. Each email should be an object with the following fields:
     "sender", "subject", "body", "is_phishing" (boolean), "red_flags" (array of strings).
 
-    You will generate 9 normal emails and 6 phishing emails.
+    You will generate 2 normal emails and 2 phishing emails.
     """
 
     response = client.models.generate_content(

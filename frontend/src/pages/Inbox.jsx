@@ -1,52 +1,71 @@
-import { useMemo } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useMemo, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import TopNav from "../components/TopNav";
-
-const emails = [
-  {
-    id: 1,
-    lessonId: "1",
-    testId: "mock-1",
-    from: "IT Support <it-support@phishfree.local>",
-    subject: "Action Required: Update Your Payroll Details",
-    preview:
-      "The system will briefly be unavailable from 11:00 PM to 11:30 PM while scheduled updates are applied.",
-    time: "8:12 AM",
-  },
-  {
-    id: 2,
-    lessonId: "2",
-    testId: "mock-2",
-    from: "Payroll Team <payroll-update@secure-payroll-alerts.net>",
-    subject: "Invoice past due - action needed",
-    preview:
-      "Your payment profile has been suspended. Verify your banking details immediately to avoid a delay.",
-    time: "8:26 AM",
-  },
-  {
-    id: 3,
-    lessonId: "3",
-    testId: "mock-3",
-    from: "HR Department <hr@phishfree.local>",
-    subject: "Password reset required",
-    preview:
-      "Open enrollment closes Friday. Review your selections in the employee portal before 5:00 PM.",
-    time: "8:41 AM",
-  },
-  {
-    id: 4,
-    lessonId: "4",
-    testId: "mock-4",
-    from: "Microsoft 365 Security <security-team@micr0soft-mail.com>",
-    subject: "Weekly sync meeting invite",
-    preview:
-      "We noticed suspicious activity on your account. Confirm your identity with the secure link below.",
-    time: "9:03 AM",
-  },
-];
+import {
+  ensureInboxTests,
+  parseGeneratedTestDescription,
+} from "../services/inboxTestService";
 
 export default function Inbox() {
+  const location = useLocation();
   const navigate = useNavigate();
+  const [emails, setEmails] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  const lessonId = useMemo(() => {
+    const params = new URLSearchParams(location.search);
+    const value = params.get("lessonId");
+    return value ? String(value) : null;
+  }, [location.search]);
+
+  useEffect(() => {
+    let mounted = true;
+    setLoading(true);
+    setError("");
+
+    ensureInboxTests(lessonId)
+      .then((tests) => {
+        if (!mounted) return;
+        const mappedEmails = tests.map((test, index) => {
+          const meta = parseGeneratedTestDescription(test.description) || {};
+          const previewBody = Array.isArray(meta.body)
+            ? meta.body.join(" ")
+            : String(meta.body || "");
+
+          return {
+            id: index + 1,
+            lessonId: meta.lessonId ? String(meta.lessonId) : lessonId,
+            testId: test.testId,
+            from: meta.sender || "Unknown sender",
+            subject: meta.subject || test.title || "Generated email",
+            preview:
+              previewBody.slice(0, 120) ||
+              "Open this email to review the message.",
+            time: test.dateTaken
+              ? new Date(test.dateTaken).toLocaleTimeString([], {
+                  hour: "numeric",
+                  minute: "2-digit",
+                })
+              : "",
+          };
+        });
+        setEmails(mappedEmails);
+      })
+      .catch((err) => {
+        if (!mounted) return;
+        setError(err.message || "Failed to load inbox emails.");
+        setEmails([]);
+      })
+      .finally(() => {
+        if (mounted) setLoading(false);
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, [lessonId]);
+
   const completedTests = useMemo(() => {
     try {
       const raw = localStorage.getItem("testGrades");
@@ -56,8 +75,11 @@ export default function Inbox() {
       return {};
     }
   }, []);
-  const completedCount = emails.filter((email) => email.testId && completedTests[email.testId]).length;
-  const allEmailsAnswered = completedCount === emails.length;
+
+  const completedCount = emails.filter(
+    (email) => email.testId && completedTests[email.testId]
+  ).length;
+  const allEmailsAnswered = emails.length > 0 && completedCount === emails.length;
 
   return (
     <div>
@@ -83,44 +105,53 @@ export default function Inbox() {
           </div>
 
           <div className="inbox-list" role="list" aria-label="Inbox email list">
-            {emails.map((email) => {
-              const isCompleted = Boolean(email.testId && completedTests[email.testId]);
-              const href = email.lessonId ? `/test?lessonId=${email.lessonId}` : "/test";
+            {loading && <p className="muted">Loading inbox emails...</p>}
+            {!loading && error && <p className="muted">{error}</p>}
 
-              return (
-                <article
-                  key={email.id}
-                  className="inbox-message"
-                  role="listitem"
-                  onClick={() => navigate(href)}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter" || event.key === " ") {
-                      event.preventDefault();
-                      navigate(href);
-                    }
-                  }}
-                  tabIndex={0}
-                  style={{ cursor: "pointer" }}
-                >
-                  <div className="inbox-message__main">
-                    <p className="inbox-message__from">{email.from}</p>
-                    <h3>{email.subject}</h3>
-                    <p className="muted">{email.preview}</p>
-                  </div>
-                  <div className="inbox-message__meta">
-                    {isCompleted && (
-                      <div className="muted" style={{ fontWeight: 600, marginBottom: 6 }}>
-                        Completed
-                      </div>
-                    )}
-                    <time className="inbox-message__time">{email.time}</time>
-                    <span className="inbox-message__arrow" aria-hidden="true">
-                      →
-                    </span>
-                  </div>
-                </article>
-              );
-            })}
+            {!loading &&
+              !error &&
+              emails.map((email) => {
+                const isCompleted = Boolean(
+                  email.testId && completedTests[email.testId]
+                );
+                const href = email.lessonId
+                  ? `/test?testId=${email.testId}&lessonId=${email.lessonId}`
+                  : `/test?testId=${email.testId}`;
+
+                return (
+                  <article
+                    key={email.id}
+                    className="inbox-message"
+                    role="listitem"
+                    onClick={() => navigate(href)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
+                        navigate(href);
+                      }
+                    }}
+                    tabIndex={0}
+                    style={{ cursor: "pointer" }}
+                  >
+                    <div className="inbox-message__main">
+                      <p className="inbox-message__from">{email.from}</p>
+                      <h3>{email.subject}</h3>
+                      <p className="muted">{email.preview}</p>
+                    </div>
+                    <div className="inbox-message__meta">
+                      {isCompleted && (
+                        <div className="muted" style={{ fontWeight: 600, marginBottom: 6 }}>
+                          Completed
+                        </div>
+                      )}
+                      <time className="inbox-message__time">{email.time}</time>
+                      <span className="inbox-message__arrow" aria-hidden="true">
+                        →
+                      </span>
+                    </div>
+                  </article>
+                );
+              })}
           </div>
         </section>
 
