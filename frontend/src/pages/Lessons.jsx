@@ -174,7 +174,7 @@ export default function Lessons() {
                                 </Link>
                                 {passedQuizForLesson && (
                                   <Link
-                                    className="btn topnav__profileBtn"
+                                    className="btn"
                                     to={`/inbox?lessonId=${lesson.lessonId}`}
                                     aria-label="Go to inbox"
                                   >

@@ -139,7 +139,7 @@ export default function LessonDetails() {
                   </Link>
                 )}
                 {quizCompletedForLesson && (
-                  <Link className="btn topnav__profileBtn" to={`/inbox?lessonId=${lesson.lessonId}`}>
+                  <Link className="btn" to={`/inbox?lessonId=${lesson.lessonId}`}>
                     Take Test
                   </Link>
                 )}

@@ -124,6 +124,7 @@ export default function Test() {
 
   const canSubmit =
     verdict === "Phish Free" || (verdict === "Phishing" && Boolean(phishingReason));
+  const hasVerdict = verdict === "Phishing" || verdict === "Phish Free";
 
   function handleVerdictSelect(option) {
     if (!activeTest) {
@@ -230,7 +231,11 @@ export default function Test() {
                       style={{
                         minWidth: 140,
                         justifyContent: "center",
-                        opacity: isSelected ? 1 : 0.85,
+                        opacity: 1,
+                        border: isSelected ? "2px solid var(--accent)" : "2px solid transparent",
+                        background: isSelected ? "var(--accent)" : undefined,
+                        color: isSelected ? "#fff" : undefined,
+                        boxShadow: isSelected ? "0 10px 24px rgba(0,0,0,0.14)" : "none",
                       }}
                     >
                       {option}
@@ -260,22 +265,6 @@ export default function Test() {
                   </div>
                 </div>
               )}
-
-              <div style={{ display: "flex", justifyContent: "flex-start" }}>
-                <button
-                  type="button"
-                  className="btn"
-                  onClick={handleSubmit}
-                  disabled={!canSubmit}
-                  style={{
-                    minWidth: 140,
-                    opacity: canSubmit ? 1 : 0.5,
-                    cursor: canSubmit ? "pointer" : "not-allowed",
-                  }}
-                >
-                  Submit
-                </button>
-              </div>
             </div>
           )}
           {statusMessage && (
@@ -284,6 +273,24 @@ export default function Test() {
             </div>
           )}
         </div>
+
+        {!loadingTests && !error && activeTest && !submitted && hasVerdict && (
+          <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 16 }}>
+            <button
+              type="button"
+              className="btn"
+              onClick={handleSubmit}
+              disabled={!canSubmit}
+              style={{
+                minWidth: 140,
+                opacity: canSubmit ? 1 : 0.5,
+                cursor: canSubmit ? "pointer" : "not-allowed",
+              }}
+            >
+              Submit
+            </button>
+          </div>
+        )}
       </main>
     </div>
   );
