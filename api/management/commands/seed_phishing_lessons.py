@@ -14,10 +14,15 @@ Phishing works by creating pressure and making the target act too quickly to thi
 
 ## Common Red Flags
 - Urgent language
+
 - Threats about account closure or suspension
+
 - Requests for passwords or private information
+
 - Suspicious sender address
+
 - Unexpected links or attachments
+
 - Generic greetings like "Dear Customer"
 
 These warning signs do not always appear all at once, but even one or two of them can be enough to justify caution. The more high-pressure or unusual the request is, the more carefully it should be checked.
@@ -66,10 +71,15 @@ The link shown in a message may not go where it claims, so users should verify w
 
 ## Common Red Flags
 - Links that do not match the real site
+
 - Misspelled website names
+
 - Strange subdomains
+
 - Extra words in the URL
+
 - IP address links
+
 - Login requests from unexpected messages
 
 The safest habit is to assume that an unexpected login link should not be trusted automatically. Instead of judging only by appearance, users should focus on the destination and whether the request was expected.
@@ -171,10 +181,15 @@ High-stakes requests should always be verified through a second trusted method b
 
 ## Common Red Flags
 - Requests for money or gift cards
+
 - Payroll or bank change requests
+
 - Text messages asking for account action
+
 - Phone calls claiming fraud or urgent support
+
 - Messages that demand secrecy
+
 - Pressure not to verify
 
 These warning signs are especially important when the request involves money, access, or sensitive records. Attackers often combine urgency with authority to make the target feel unable to say no or slow down.
