@@ -5,8 +5,8 @@ import json
 
 LESSONS = [
     {
-        "title": "Phishing Fundamentals: Recognize, Pause, Verify, Report",
-        "lesson_material": """## Lesson 1: Phishing Fundamentals
+        "title": "Phishing Fundamentals",
+        "lesson_material": """## Lesson 1: Phishing Fundamentals: Recognize, Pause, Verify, Report
         
 Phishing is a scam where someone pretends to be a trusted person, business, school, bank, or organization to trick someone into giving away private information, clicking harmful links, opening unsafe attachments, or sending money. The goal is usually to steal personal data, account access, or money by making the victim believe the message is real.
 
