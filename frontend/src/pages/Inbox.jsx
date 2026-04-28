@@ -87,6 +87,14 @@ export default function Inbox() {
     <div>
       <TopNav />
       <main className="page inbox-page">
+        <style>
+          {`
+            @keyframes inbox-email-loader-spin {
+              from { transform: rotate(0deg); }
+              to { transform: rotate(360deg); }
+            }
+          `}
+        </style>
         <section className="inbox-hero">
           <div>
             <h1>Inbox</h1>
@@ -107,7 +115,33 @@ export default function Inbox() {
           </div>
 
           <div className="inbox-list" role="list" aria-label="Inbox email list">
-            {loading && <p className="muted">Loading inbox emails...</p>}
+            {loading && (
+              <div
+                style={{
+                  minHeight: 220,
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 14,
+                }}
+              >
+                <div
+                  aria-hidden="true"
+                  style={{
+                    width: 28,
+                    height: 28,
+                    borderRadius: "50%",
+                    border: "3px solid rgba(0,0,0,0.12)",
+                    borderTopColor: "var(--accent)",
+                    animation: "inbox-email-loader-spin 0.9s linear infinite",
+                  }}
+                />
+                <div className="muted" style={{ fontWeight: 600 }}>
+                  Loading Inbox...
+                </div>
+              </div>
+            )}
             {!loading && error && <p className="muted">{error}</p>}
 
             {!loading &&

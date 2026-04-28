@@ -90,25 +90,102 @@ export default function LessonDetails() {
     }
   }, [lessonId])
 
-  const paragraphs = useMemo(() => {
+  const contentBlocks = useMemo(() => {
     if (!lesson?.lessonMaterial) return []
-    return lesson.lessonMaterial
-      .split(/\n\s*\n/)
+
+    const lines = String(lesson.lessonMaterial)
+      .split("\n")
       .map((line) => line.trim())
-      .filter(Boolean)
+
+    const blocks = []
+    let currentBullets = []
+
+    const flushBullets = () => {
+      if (currentBullets.length === 0) return
+      blocks.push({
+        type: "bullets",
+        items: currentBullets,
+      })
+      currentBullets = []
+    }
+
+    lines.forEach((line) => {
+      if (!line) {
+        flushBullets()
+        return
+      }
+
+      if (line.startsWith("## ")) {
+        flushBullets()
+        blocks.push({
+          type: "header",
+          text: line.slice(3).trim(),
+        })
+        return
+      }
+
+      if (line.startsWith("- ")) {
+        currentBullets.push(line.slice(2).trim())
+        return
+      }
+
+      flushBullets()
+      blocks.push({
+        type: "paragraph",
+        text: line,
+      })
+    })
+
+    flushBullets()
+    return blocks
   }, [lesson?.lessonMaterial])
 
   return (
     <div>
       <TopNav />
       <main className="page">
+        <style>
+          {`
+            @keyframes lesson-details-loader-spin {
+              from { transform: rotate(0deg); }
+              to { transform: rotate(360deg); }
+            }
+          `}
+        </style>
         <div style={{ marginBottom: 20 }}>
           <Link className="btn" to="/learning">
-            ← Back To Learning
+            Back To Learning
           </Link>
         </div>
 
-        {loading && <p className="muted">Loading lesson…</p>}
+        {loading && (
+          <div className="card" style={{ minHeight: 260, display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 14,
+              }}
+            >
+              <div
+                aria-hidden="true"
+                style={{
+                  width: 28,
+                  height: 28,
+                  borderRadius: "50%",
+                  border: "3px solid rgba(0,0,0,0.12)",
+                  borderTopColor: "var(--accent)",
+                  animation: "lesson-details-loader-spin 0.9s linear infinite",
+                }}
+              />
+              <div className="muted" style={{ fontWeight: 600 }}>
+                Loading Lesson...
+              </div>
+            </div>
+          </div>
+        )}
         {error && <p className="muted">{error}</p>}
 
         {!loading && !error && lesson && (
@@ -116,12 +193,32 @@ export default function LessonDetails() {
             <div className="card">
               <h2 style={{ marginTop: 0 }}>{lesson.title}</h2>
 
-              <div style={{ display: "grid", gap: 8 }}>
-                {paragraphs.map((p, idx) => (
-                  <p key={idx} style={{ margin: 0 }}>
-                    {p}
-                  </p>
-                ))}
+              <div style={{ display: "grid", gap: 12 }}>
+                {contentBlocks.map((block, idx) => {
+                  if (block.type === "header") {
+                    return (
+                      <h3 key={idx} style={{ margin: 0 }}>
+                        {block.text}
+                      </h3>
+                    )
+                  }
+
+                  if (block.type === "bullets") {
+                    return (
+                      <ul key={idx} style={{ margin: 0, paddingLeft: 20, display: "grid", gap: 6 }}>
+                        {block.items.map((item, itemIdx) => (
+                          <li key={`${idx}-${itemIdx}`}>{item}</li>
+                        ))}
+                      </ul>
+                    )
+                  }
+
+                  return (
+                    <p key={idx} style={{ margin: 0 }}>
+                      {block.text}
+                    </p>
+                  )
+                })}
               </div>
 
               {lesson.score !== null && lesson.score !== undefined && (

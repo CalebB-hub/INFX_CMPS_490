@@ -89,13 +89,48 @@ export default function QuizDetails() {
     <div>
       <TopNav />
       <main className="page">
+        <style>
+          {`
+            @keyframes quiz-loader-spin {
+              from { transform: rotate(0deg); }
+              to { transform: rotate(360deg); }
+            }
+          `}
+        </style>
         <div style={{ marginBottom: 20 }}>
           <Link className="btn" to="/learning">
             Back To Learning
           </Link>
         </div>
 
-        {loading && <p className="muted">Loading quiz...</p>}
+        {loading && (
+          <div className="card" style={{ minHeight: 260, display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 14,
+              }}
+            >
+              <div
+                aria-hidden="true"
+                style={{
+                  width: 28,
+                  height: 28,
+                  borderRadius: "50%",
+                  border: "3px solid rgba(0,0,0,0.12)",
+                  borderTopColor: "var(--accent)",
+                  animation: "quiz-loader-spin 0.9s linear infinite",
+                }}
+              />
+              <div className="muted" style={{ fontWeight: 600 }}>
+                Loading Quiz...
+              </div>
+            </div>
+          </div>
+        )}
         {error && <p className="muted">{error}</p>}
 
         {!loading && !error && quiz && (

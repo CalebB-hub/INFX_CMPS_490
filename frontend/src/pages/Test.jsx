@@ -176,6 +176,14 @@ export default function Test() {
     <div>
       <TopNav />
       <main className="page">
+        <style>
+          {`
+            @keyframes test-email-loader-spin {
+              from { transform: rotate(0deg); }
+              to { transform: rotate(360deg); }
+            }
+          `}
+        </style>
         <div style={{ marginBottom: 20 }}>
           <Link className="btn" to={lessonIdParam ? `/inbox?lessonId=${lessonIdParam}` : "/inbox"}>
             Back To Inbox
@@ -185,7 +193,33 @@ export default function Test() {
         <div className="card">
           <h2 style={{ marginTop: 0 }}>Test Email</h2>
           <div style={{ marginTop: 16 }}>
-            {loadingTests && <div className="muted">Loading test email...</div>}
+            {loadingTests && (
+              <div
+                style={{
+                  minHeight: 220,
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 14,
+                }}
+              >
+                <div
+                  aria-hidden="true"
+                  style={{
+                    width: 28,
+                    height: 28,
+                    borderRadius: "50%",
+                    border: "3px solid rgba(0,0,0,0.12)",
+                    borderTopColor: "var(--accent)",
+                    animation: "test-email-loader-spin 0.9s linear infinite",
+                  }}
+                />
+                <div className="muted" style={{ fontWeight: 600 }}>
+                  Loading Email...
+                </div>
+              </div>
+            )}
             {!loadingTests && error && <div className="muted">{error}</div>}
             {!loadingTests && !error && !activeTest && (
               <div className="muted">No test email was found for this lesson.</div>

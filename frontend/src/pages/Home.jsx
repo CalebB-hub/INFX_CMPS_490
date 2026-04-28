@@ -279,12 +279,47 @@ export default function Home() {
     <div>
       <TopNav />
       <main className="page">
+        <style>
+          {`
+            @keyframes dashboard-loader-spin {
+              from { transform: rotate(0deg); }
+              to { transform: rotate(360deg); }
+            }
+          `}
+        </style>
         <h2>Home</h2>
         <p className="muted">
           Welcome back{dashboard?.user?.firstName ? `, ${dashboard.user.firstName}` : ""}. Here is your training overview.
         </p>
 
-        {loading && <p className="muted">Loading dashboard...</p>}
+        {loading && (
+          <div className="card" style={{ minHeight: 260, display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 14,
+              }}
+            >
+              <div
+                aria-hidden="true"
+                style={{
+                  width: 28,
+                  height: 28,
+                  borderRadius: "50%",
+                  border: "3px solid rgba(0,0,0,0.12)",
+                  borderTopColor: "var(--accent)",
+                  animation: "dashboard-loader-spin 0.9s linear infinite",
+                }}
+              />
+              <div className="muted" style={{ fontWeight: 600 }}>
+                Loading Dashboard...
+              </div>
+            </div>
+          </div>
+        )}
         {!loading && error && <div className="alert alert--error">{error}</div>}
 
         <div className="grid" style={{ display: "grid", gap: 12, gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))" }}>

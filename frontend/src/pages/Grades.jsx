@@ -124,10 +124,45 @@ export default function Grades() {
     <div>
       <TopNav />
       <main className="page">
+        <style>
+          {`
+            @keyframes grades-loader-spin {
+              from { transform: rotate(0deg); }
+              to { transform: rotate(360deg); }
+            }
+          `}
+        </style>
         <h2>Grades</h2>
         <p className="muted">Your quiz and test results by lesson.</p>
 
-        {loading && <p className="muted">Loading grades...</p>}
+        {loading && (
+          <div className="card" style={{ minHeight: 260, display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 14,
+              }}
+            >
+              <div
+                aria-hidden="true"
+                style={{
+                  width: 28,
+                  height: 28,
+                  borderRadius: "50%",
+                  border: "3px solid rgba(0,0,0,0.12)",
+                  borderTopColor: "var(--accent)",
+                  animation: "grades-loader-spin 0.9s linear infinite",
+                }}
+              />
+              <div className="muted" style={{ fontWeight: 600 }}>
+                Loading Grades...
+              </div>
+            </div>
+          </div>
+        )}
         {error && <p className="muted">{error}</p>}
 
         {!loading && !error && (
