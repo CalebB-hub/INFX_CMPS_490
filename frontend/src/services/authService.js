@@ -1,4 +1,4 @@
-const API_BASE = "http://localhost:8000/api";
+import { API_BASE } from '../config';
 const TOKEN_KEY = "pf_auth_token";
 const REFRESH_TOKEN_KEY = "pf_refresh_token";
 const USER_KEY = "pf_user";

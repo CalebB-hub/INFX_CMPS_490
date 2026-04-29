@@ -1,6 +1,6 @@
 import { getAccessToken, refreshAccessToken } from "./authService";
 
-const API_BASES = ["http://localhost:8000/api", "/api"];
+import { API_BASES } from '../config';
 
 async function fetchWithAuth(url) {
   const token = getAccessToken();

@@ -1,6 +1,6 @@
 import { getAccessToken, refreshAccessToken } from "./authService";
 
-const API_BASES = ["http://localhost:8000/api", "/api"];
+import { API_BASES } from '../config';
 const EMAILS_PER_INBOX = 4;
 const TEST_GRADES_KEY = "testGrades";
 

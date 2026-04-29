@@ -4,7 +4,7 @@ import PasswordStrength from "../components/PasswordStrength";
 import PasswordToggleIcon from "../components/PasswordToggleIcon";
 import { computeChecks } from "../utils/passwordUtils";
 
-const API_BASE = "http://localhost:8000/api";
+import { API_BASE } from '../config';
 
 export default function ResetPassword() {
   const navigate = useNavigate();

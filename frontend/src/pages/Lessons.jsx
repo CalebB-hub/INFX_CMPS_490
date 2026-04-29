@@ -3,7 +3,7 @@ import { Link } from "react-router-dom"
 import TopNav from "../components/TopNav"
 import { getAccessToken, refreshAccessToken } from "../services/authService"
 
-const API_BASES = ["http://localhost:8000/api", "/api"]
+import { API_BASES } from '../config';
 
 async function fetchWithAuth(url) {
   const token = getAccessToken()

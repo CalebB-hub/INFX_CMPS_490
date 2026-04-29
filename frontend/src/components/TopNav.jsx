@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { logout } from "../services/authService";
 import PhishFreeLogoText from "../Logos/Phish Free Logo Text.png";
 
-const API_BASE = "http://localhost:8000/api";
+import { API_BASE } from '../config';
 
 export default function TopNav() {
   const navigate = useNavigate();

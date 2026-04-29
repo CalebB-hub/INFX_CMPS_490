@@ -3,7 +3,7 @@ import TopNav from "../components/TopNav";
 import { getAccessToken, getUser, refreshAccessToken } from "../services/authService";
 import { useNavigate } from "react-router-dom";
 
-const API_BASE = "http://localhost:8000/api";
+import { API_BASE } from '../config';
 const USER_KEY = "pf_user";
 
 async function fetchProfile(token) {
