@@ -2,6 +2,17 @@
 
 A full-stack web application using Django (backend) and Vite + React (frontend).
 
+## Contributors
+
+| Contributor | Role |
+|---|---|
+| Caleb Broussard | Backend setup and deployment, phishing lesson content and seeding, score endpoints |
+| Emily Duhon | Learner-facing frontend: dashboard, profile, inbox, API integration |
+| Leonardo Chavez | Quiz, test and grades pages, settings and theme |
+| Joshua Pitre | REST API for lessons, quizzes and users, AI email generation |
+| Ebony Sylvester | Branching signup, role-based access and protected routes, password strength and reset, admin dashboard prototype |
+| Timothy | JWT login and signup, password policy, Gemini endpoint |
+
 ## Project Structure
 
 ```
